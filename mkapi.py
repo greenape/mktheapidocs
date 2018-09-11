@@ -4,6 +4,7 @@ from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     modules = set()
     module_file = pathlib.Path(module.__file__).parent.parent
+    dir_was = pathlib.Path()
     os.chdir(module_file)
     for root, dirs, files in os.walk(module.__name__):
         module_path = pathlib.Path(root)
@@ -17,7 +18,7 @@ def get_all_modules_from_files(module, hide=["__init__", "_version"]):
                         submodule = importlib.import_module(".".join((module_path / inspect.getmodulename(file)).parts))
                         if not module.__name__.startswith("_") and not submodule.__name__.startswith("_"):
                             modules.add((submodule.__name__, submodule, True))
-        
+    os.chdir(dir_was)
     return modules
 
 def get_classes(module):
@@ -199,9 +200,10 @@ def to_doc(name, thing, header_level):
 @click.argument("output_dir")
 def make_api_doc(module_name, output_dir):
     module = importlib.import_module(module_name)
+    output_dir = pathlib.Path(output_dir).absolute()
     for module_name, module, leaf in get_all_modules_from_files(module):
         print(module_name)
-        path = pathlib.Path(output_dir) / pathlib.Path(*module.__name__.split("."))
+        path = pathlib.Path(output_dir).joinpath(*module.__name__.split("."))
         available_classes = get_available_classes(module)
         deffed_classes = get_classes(module)
         deffed_funcs = get_funcs(module)
@@ -211,7 +213,7 @@ def make_api_doc(module_name, output_dir):
         else:
             doc_path = path / "index.md"
         doc_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(doc_path, "w") as index:
+        with open(doc_path.absolute(), "w") as index:
             module_doc = module.__doc__
             
             if module_doc is not None:
