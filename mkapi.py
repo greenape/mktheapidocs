@@ -3,6 +3,8 @@ from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
 
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     modules = set()
+    module_file = pathlib.Path(module.__file__).parent.parent
+    os.chdir(module_file)
     for root, dirs, files in os.walk(module.__name__):
         module_path = pathlib.Path(root)
         if not module_path.parts[-1].startswith("_"):
