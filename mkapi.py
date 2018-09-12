@@ -179,6 +179,35 @@ def params_section(doc, header_level):
             lines.append(f"    {' '.join(description)}\n\n")
     return lines
 
+def escape(string):
+    return string.replace("_", "\\_")
+
+def get_source_link(thing, source_location):
+    try:
+        lineno = get_line(thing)
+        try:
+            owner_module = inspect.getmodule(thing)
+            assert owner_module is not None
+        except (TypeError, AssertionError):
+            owner_module = inspect.getmodule(thing.fget)
+
+        thing_file = "/".join(owner_module.__name__.split("."))
+        if owner_module.__file__.endswith("__init__.py"):
+            thing_file += "/__init__.py"
+        else:
+            thing_file += ".py"
+        return f"Source: [{escape(thing_file)}]({source_location}/{thing_file}#L{lineno})" + "\n\n"
+    except Exception as e:
+        print("Failed to find source file.")
+        print(e)
+        print(lineno)
+        print(thing)
+        print(owner_module)
+        print(thing_file)
+        print(source_location)
+        pass
+    return ""
+
 def to_doc(name, thing, header_level, source_location):
     if inspect.isclass(thing):
         header = f"{'#'*header_level} Class **{name}**\n\n"
@@ -193,19 +222,8 @@ def to_doc(name, thing, header_level, source_location):
         lines.append(f"```python\n{func_sig}\n```\n")
     except Exception as e:
         pass
-    try:
-        lineno = get_line(thing)
-        try:
-            owner_module = inspect.getmodule(thing)
-        except TypeError:
-            owner_module = inspect.getmodule(thing.fget)
-        if module_file_url.endswith("__init__.py"):
-            thing_file = "/".join(inspect.getmodule(thing).__name__.split(".")) + "/\_\_init\_\_.py"
-        else:
-            thing_file = "/".join(inspect.getmodule(thing).__name__.split(".")) + ".py"
-        lines.append(f"Source: [{thing_file}]({source_location}#L{lineno})" + "\n\n")
-    except:
-        pass
+    lines.append(get_source_link(thing, source_location))
+
     try:
         doc = NumpyDocString(inspect.getdoc(thing))._parsed_data
         lines += summary(doc)
@@ -239,35 +257,34 @@ def make_api_doc(module_name, output_dir, source_location):
             doc_path = path / "index.md"
         doc_path.parent.mkdir(parents=True, exist_ok=True)
         module_path = '/'.join(module.__name__.split('.'))
-        module_file_url = f"{source_location}/{module_path}.py" if leaf else f"{source_location}/{module_path}/__init__.py"
         with open(doc_path.absolute(), "w") as index:
             module_doc = module.__doc__
 
             # Module overview documentation
             if module_doc is not None:
-                index.writelines(to_doc(module.__name__, module, 1, module_file_url))
+                index.writelines(to_doc(module.__name__, module, 1, source_location))
             else:
                 index.write(f"# {module.__name__}\n\n")
             index.write("\n\n")
             for cls_name, cls in sorted(deffed_classes):
-                lines = to_doc(cls_name, cls, 2, module_file_url)
+                lines = to_doc(cls_name, cls, 2, source_location)
                 index.writelines(lines)
 
                 properties = inspect.getmembers(cls, lambda o: isinstance(o, property))
                 if len(properties):
                     index.write("### Properties\n\n")
                     for prop_name, prop in properties:
-                        lines = to_doc(prop_name, prop, 4, module_file_url)
+                        lines = to_doc(prop_name, prop, 4, source_location)
                         index.writelines(lines)
 
                 class_methods = [x for x in inspect.getmembers(cls, inspect.isfunction) if (not x[0].startswith("_"))]
                 if len(class_methods) > 0:
                     index.write("### Methods \n\n")
                     for method_name, method in class_methods:
-                        lines = to_doc(method_name, method, 4, module_file_url)
+                        lines = to_doc(method_name, method, 4, source_location)
                         index.writelines(lines)
             for fname, func in sorted(deffed_funcs):
-                lines = to_doc(fname, func, 2, module_file_url)
+                lines = to_doc(fname, func, 2, source_location)
                 index.writelines(lines)
 
 
