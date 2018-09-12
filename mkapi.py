@@ -117,7 +117,7 @@ def refs_section(doc):
             print(ref_num)
             ref_body = " ".join(ref.split(" ")[2:])
             print(f"[^{ref_num}] {ref_body}" + "\n")
-            lines.append(f"[^{ref_num}]: {ref_body}" + "\n")
+            lines.append(f"[^{ref_num}]: {ref_body}" + "\n\n")
             print(lines)
     return lines
 
