@@ -1,10 +1,18 @@
 import inspect, os, pathlib, importlib, black, re, click
 from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
 
+
+def get_line(thing):
+    try:
+        return inspect.getsourcelines(thing)[1]
+    except TypeError:
+        # Might be a property
+        return inspect.getsourcelines(thing.fget)[1]
+
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     modules = set()
     module_file = pathlib.Path(module.__file__).parent.parent
-    dir_was = pathlib.Path()
+    dir_was = pathlib.Path().absolute()
     os.chdir(module_file)
     for root, dirs, files in os.walk(module.__name__):
         module_path = pathlib.Path(root)
@@ -47,8 +55,8 @@ def mangle_types(types):
             default = re.sub("default (.+)", r"default ``\1``", default[0])
             mangled.append(default)
         types = re.sub("default .+", "", types)
-        curlied = re.findall("{'.+'}", types)
-        no_curls = re.subn("{'.+'},?", "", types)[0]
+        curlied = re.findall("{.+}", types)
+        no_curls = re.subn("{.+},?", "", types)[0]
         ts = [t.strip() for t in no_curls.split(",")]
         ts = [t.split(" or ") for t in ts]
         ts =  [item for sublist in ts for item in sublist if item != ""]
@@ -171,16 +179,28 @@ def params_section(doc, header_level):
             lines.append(f"    {' '.join(description)}\n\n")
     return lines
 
-def to_doc(name, thing, header_level):
+def to_doc(name, thing, header_level, source_location):
     if inspect.isclass(thing):
         header = f"{'#'*header_level} Class **{name}**\n\n"
     else:
         header = f"{'#'*header_level} {name}\n\n"
     lines = [header]
     try:
-        func_sig = black.format_str(f"{name}{inspect.signature(thing)}", 80).strip()
+        try:
+            func_sig = black.format_str(f"{name}{inspect.signature(thing)}", 80).strip()
+        except TypeError:
+            func_sig = black.format_str(f"{name}{inspect.signature(thing.fget)}", 80).strip()
         lines.append(f"```python\n{func_sig}\n```\n")
     except Exception as e:
+        pass
+    try:
+        lineno = get_line(thing)
+        try:
+            thing_file = "/".join(inspect.getmodule(thing).__name__.split(".")) + ".py"
+        except TypeError:
+            thing_file = "/".join(inspect.getmodule(thing.fget).__name__.split(".")) + ".py"
+        lines.append(f"Source: [{thing_file}]({source_location}#L{lineno})" + "\n\n")
+    except:
         pass
     try:
         doc = NumpyDocString(thing.__doc__)._parsed_data
@@ -198,7 +218,8 @@ def to_doc(name, thing, header_level):
 @click.command()
 @click.argument("module_name")
 @click.argument("output_dir")
-def make_api_doc(module_name, output_dir):
+@click.argument("source-location")
+def make_api_doc(module_name, output_dir, source_location):
     module = importlib.import_module(module_name)
     output_dir = pathlib.Path(output_dir).absolute()
     for module_name, module, leaf in get_all_modules_from_files(module):
@@ -213,33 +234,40 @@ def make_api_doc(module_name, output_dir):
         else:
             doc_path = path / "index.md"
         doc_path.parent.mkdir(parents=True, exist_ok=True)
+        module_path = '/'.join(module.__name__.split('.'))
+        module_file_url = f"{source_location}/tree/master/{module_path}.py" if leaf else f"{module_path}/__init__.py"
         with open(doc_path.absolute(), "w") as index:
             module_doc = module.__doc__
-            
+            index.write(f"source: {module_path}")
+            if leaf:
+                index.write(".py")
+            index.write("\n")
+
+            # Module overview documentation
             if module_doc is not None:
-                index.writelines(to_doc(module.__name__, module, 1))
+                index.writelines(to_doc(module.__name__, module, 1, module_file_url))
             else:
                 index.write(f"# {module.__name__}\n\n")
             index.write("\n\n")
             for cls_name, cls in sorted(deffed_classes):
-                lines = to_doc(cls_name, cls, 2)
+                lines = to_doc(cls_name, cls, 2, module_file_url)
                 index.writelines(lines)
 
                 properties = inspect.getmembers(cls, lambda o: isinstance(o, property))
                 if len(properties):
                     index.write("### Properties\n\n")
                     for prop_name, prop in properties:
-                        lines = to_doc(prop_name, prop, 4)
+                        lines = to_doc(prop_name, prop, 4, module_file_url)
                         index.writelines(lines)
 
                 class_methods = [x for x in inspect.getmembers(cls, inspect.isfunction) if (not x[0].startswith("_"))]
                 if len(class_methods) > 0:
                     index.write("### Methods \n\n")
                     for method_name, method in class_methods:
-                        lines = to_doc(method_name, method, 4)
+                        lines = to_doc(method_name, method, 4, module_file_url)
                         index.writelines(lines)
             for fname, func in sorted(deffed_funcs):
-                lines = to_doc(fname, func, 2)
+                lines = to_doc(fname, func, 2, module_file_url)
                 index.writelines(lines)
 
 
