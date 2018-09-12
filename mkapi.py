@@ -8,6 +8,9 @@ def get_line(thing):
     except TypeError:
         # Might be a property
         return inspect.getsourcelines(thing.fget)[1]
+    except Exception as e:
+        print(thing)
+        raise e
 
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     modules = set()
@@ -17,15 +20,18 @@ def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     for root, dirs, files in os.walk(module.__name__):
         module_path = pathlib.Path(root)
         if not module_path.parts[-1].startswith("_"):
-            module = importlib.import_module(".".join(module_path.parts))
-            if not module.__name__.startswith("_"):
-                modules.add((module.__name__, module, False))
-                for file in files:
-                    module_name = inspect.getmodulename(file)
-                    if module_name is not None and module_name not in hide:
-                        submodule = importlib.import_module(".".join((module_path / inspect.getmodulename(file)).parts))
-                        if not module.__name__.startswith("_") and not submodule.__name__.startswith("_"):
-                            modules.add((submodule.__name__, submodule, True))
+            try:
+                module = importlib.import_module(".".join(module_path.parts))
+                if not module.__name__.startswith("_"):
+                    modules.add((module.__name__, module, False))
+                    for file in files:
+                        module_name = inspect.getmodulename(file)
+                        if module_name is not None and module_name not in hide:
+                            submodule = importlib.import_module(".".join((module_path / inspect.getmodulename(file)).parts))
+                            if not module.__name__.startswith("_") and not submodule.__name__.startswith("_"):
+                                modules.add((submodule.__name__, submodule, True))
+            except ModuleNotFoundError:
+                print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
     os.chdir(dir_was)
     return modules
 
@@ -57,10 +63,12 @@ def mangle_types(types):
         types = re.sub("default .+", "", types)
         curlied = re.findall("{.+}", types)
         no_curls = re.subn("{.+},?", "", types)[0]
+        annotated = re.findall("[a-zA-Z]+\[.+\]", no_curls)
+        no_curls = re.subn("[a-zA-Z]+\[.+\],?", "", no_curls)[0]
         ts = [t.strip() for t in no_curls.split(",")]
         ts = [t.split(" or ") for t in ts]
         ts =  [item for sublist in ts for item in sublist if item != ""]
-        types = ts + curlied 
+        types = ts + curlied + annotated
         for ix, typ in enumerate(types):
             ts = [f"``{t}``" for t in  typ.split(" of ")]
             mangled.append(" of ".join(ts))
@@ -129,22 +137,56 @@ def examples_section(doc, header_level):
         lines += mangle_examples(doc['Examples'])
     return lines
 
-def returns_section(doc, header_level):
+
+def returns_section(thing, doc, header_level):
     lines = []
+    return_type = None
     try:
-        if 'Returns' in doc and len(doc['Returns']) > 0:
+        return_type = thing.__annotations__['return']
+    except AttributeError:
+        try:
+            return_type = thing.fget.__annotations__['return']
+        except:
+            pass
+    except KeyError:
+        pass
+    if return_type is None:
+        return_type = ""
+    else:
+        print(f"{thing} has annotated return type {return_type}")
+        try:
+            return_type = f"{return_type.__name__}" if return_type.__module__ == "builtins" else f"{return_type.__module__}.{return_type.__name__}"
+        except AttributeError:
+            return_type = str(return_type)
+        print(return_type)
+
+    try:
+        if 'Returns' in doc and len(doc['Returns']) > 0 or return_type != "":
             lines.append(f"{'#'*(header_level+1)} Returns\n")
-            for name, typ, desc in doc['Returns']:
-                if ":" in name:
-                    name, typ = name.split(":")
-                
+            if return_type != "" and len(doc['Returns']) == 1:
+                name, typ, desc = doc['Returns'][0]
                 if typ != "":
-                    line = f"- `{name}`: {mangle_types(typ)}"
+                    lines.append(f"- `{name}`: ``{return_type}``")
                 else:
-                    line = f"- {mangle_types(name)}"
-                line += "\n\n"
-                lines.append(line)
-                lines.append(f"    {' '.join(desc)}\n\n")
+                    lines.append(f"- ``{return_type}``")
+                lines.append("\n\n")
+                if desc != "":
+                    lines.append(f"    {' '.join(desc)}\n\n")
+            elif return_type != "":
+                lines.append(f"- ``{return_type}``")
+                lines.append("\n\n")
+            else:
+                for name, typ, desc in doc['Returns']:
+                    if ":" in name:
+                        name, typ = name.split(":")
+                    
+                    if typ != "":
+                        line = f"- `{name}`: {mangle_types(typ)}"
+                    else:
+                        line = f"- {mangle_types(name)}"
+                    line += "\n\n"
+                    lines.append(line)
+                    lines.append(f"    {' '.join(desc)}\n\n")
     except Exception as e:
         print(e)
         print(doc)
@@ -160,24 +202,23 @@ def summary(doc):
         lines.append("\n")
     return lines
 
-def params_section(doc, header_level):
+def params_section(thing, doc, header_level):
     lines = []
-    if 'Parameters' in doc and len(doc['Parameters']) > 0:
-        lines.append(f"{'#'*(header_level+1)} Parameters\n")
-        for names, types, description in doc['Parameters']:
-            if types == "":
-                try:
-                    names, types = names.split(":")
-                except:
-                    pass
-            names = names.split(",")
-            lines.append("- ")
-            lines.append(", ".join(f"`{name}`" for name in names))
-            if types != "":
-                lines.append(f": {mangle_types(types)}")
-            lines.append("\n\n")
-            lines.append(f"    {' '.join(description)}\n\n")
-    return lines
+    annotations = dict()
+    annot_src = thing
+    if inspect.isclass(thing):
+        annot_src = thing.__init__
+    try:
+        annotations = dict(annot_src.__annotations__)
+    except AttributeError:
+        try:
+            annotations = dict(annot_src.fget.__annotations__)
+        except:
+            pass
+    annotations.pop('return', None)
+
+    class_doc = doc['Parameters']
+    return type_list(annotations, class_doc, '#'*(header_level+1) + " Parameters\n\n")
 
 def escape(string):
     return string.replace("_", "\\_")
@@ -208,27 +249,116 @@ def get_source_link(thing, source_location):
         pass
     return ""
 
+def get_signature(name, thing):
+    if inspect.ismodule(thing):
+        return ""
+    try:
+        try:
+            try:
+                func_sig = black.format_str(f"{name}{inspect.signature(thing)}", 80).strip()
+            except TypeError:
+                func_sig = black.format_str(f"{name}{inspect.signature(thing.fget)}", 80).strip()
+        except ValueError:
+            try:
+                func_sig = f"{name}{inspect.signature(thing)}"
+            except TypeError:
+                func_sig = f"{name}{inspect.signature(thing.fget)}"
+    except ValueError:
+        return ""
+    return f"```python\n{func_sig}\n```\n"
+
+
+def get_names(names, types):
+    if types == "":
+        try:
+            names, types = names.split(":")
+        except:
+            pass
+    return names.split(","), types
+
+def type_list(annotations, doc, header):
+    lines = []
+    docced = set()
+    if len(annotations) > 0 or len(doc) > 0:
+        lines.append(header)
+        for names, types, description in doc:
+            names, types = get_names(names, types)
+            unannotated = []
+            for name in names:
+                docced.add(name)
+                if name in annotations:
+                    typ = annotations[name]
+                    type_string = f"{typ.__name__}" if typ.__module__ == "builtins" else f"{typ.__module__}.{typ.__name__}"
+                    lines.append(f"- `{name}`: ``{type_string}``")
+                else:
+                    unannotated.append(name)
+            if len(unannotated) > 0:
+                lines.append("- ")
+                lines.append(", ".join(f"`{name}`" for name in unannotated))
+                if types != "" and len(unannotated) > 0:
+                    lines.append(f": {mangle_types(types)}")
+            lines.append("\n\n")
+            lines.append(f"    {' '.join(description)}\n\n")
+    if len(annotations) > 0:
+        for name, typ in annotations.items():
+            if name not in docced:
+                type_string = f"{typ.__name__}" if typ.__module__ == "builtins" else f"{typ.__module__}.{typ.__name__}"
+                lines.append(f"- `{name}`: ``{type_string}``")
+                lines.append("\n\n")
+    return lines
+
+
+def split_props(thing, doc):
+    props = inspect.getmembers(thing, lambda o: isinstance(o, property))
+    ps = []
+    docs = [(*get_names(names, types), names, types, desc) for names, types, desc in doc]
+    for prop_name, prop in props:
+        in_doc = [d for d in enumerate(docs) if prop_name in d[0]]
+        for d in in_doc:
+            docs.remove(d)
+        ps.append(prop_name)
+    if len(docs) > 0:
+        _, _, names, types, descs = zip(*docs)
+        return ps, zip(names, types, descs)
+    return ps, []
+
+def attributes_section(thing, doc, header_level):
+    # Get Attributes
+
+    if not inspect.isclass(thing):
+        return []
+
+    annotations = dict()
+    try:
+        annotations = dict(thing.__annotations__)
+    except AttributeError:
+        pass
+
+    props, class_doc = split_props(thing, doc['Attributes'])
+    annotations.pop('return', None)
+    tl = type_list(annotations, class_doc, "\n### Attributes\n\n")
+    if len(tl) == 0 and len(props) > 0:
+        tl.append("\n### Attributes\n\n")
+    for prop in props:
+        tl.append(f'- [`{prop}`](#{prop})\n\n')
+    return tl
+
+
 def to_doc(name, thing, header_level, source_location):
     if inspect.isclass(thing):
         header = f"{'#'*header_level} Class **{name}**\n\n"
     else:
         header = f"{'#'*header_level} {name}\n\n"
     lines = [header]
-    try:
-        try:
-            func_sig = black.format_str(f"{name}{inspect.signature(thing)}", 80).strip()
-        except TypeError:
-            func_sig = black.format_str(f"{name}{inspect.signature(thing.fget)}", 80).strip()
-        lines.append(f"```python\n{func_sig}\n```\n")
-    except Exception as e:
-        pass
+    lines.append(get_signature(name, thing))
     lines.append(get_source_link(thing, source_location))
 
     try:
         doc = NumpyDocString(inspect.getdoc(thing))._parsed_data
         lines += summary(doc)
-        lines += params_section(doc, header_level)
-        lines += returns_section(doc, header_level)
+        lines += attributes_section(thing, doc, header_level)
+        lines += params_section(thing, doc, header_level)
+        lines += returns_section(thing, doc, header_level)
         lines += examples_section(doc, header_level)  
         lines += notes_section(doc)
         lines += refs_section(doc)
@@ -270,14 +400,8 @@ def make_api_doc(module_name, output_dir, source_location):
                 lines = to_doc(cls_name, cls, 2, source_location)
                 index.writelines(lines)
 
-                properties = inspect.getmembers(cls, lambda o: isinstance(o, property))
-                if len(properties):
-                    index.write("### Properties\n\n")
-                    for prop_name, prop in properties:
-                        lines = to_doc(prop_name, prop, 4, source_location)
-                        index.writelines(lines)
-
                 class_methods = [x for x in inspect.getmembers(cls, inspect.isfunction) if (not x[0].startswith("_"))]
+                class_methods += inspect.getmembers(cls, lambda o: isinstance(o, property))
                 if len(class_methods) > 0:
                     index.write("### Methods \n\n")
                     for method_name, method in class_methods:
