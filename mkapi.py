@@ -12,6 +12,7 @@ def get_line(thing):
         print(thing)
         raise e
 
+
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     modules = set()
     module_file = pathlib.Path(module.__file__).parent.parent
@@ -27,27 +28,64 @@ def get_all_modules_from_files(module, hide=["__init__", "_version"]):
                     for file in files:
                         module_name = inspect.getmodulename(file)
                         if module_name is not None and module_name not in hide:
-                            submodule = importlib.import_module(".".join((module_path / inspect.getmodulename(file)).parts))
-                            if not module.__name__.startswith("_") and not submodule.__name__.startswith("_"):
+                            submodule = importlib.import_module(
+                                ".".join(
+                                    (module_path / inspect.getmodulename(file)).parts
+                                )
+                            )
+                            if not module.__name__.startswith(
+                                "_"
+                            ) and not submodule.__name__.startswith("_"):
                                 modules.add((submodule.__name__, submodule, True))
             except ModuleNotFoundError:
                 print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
     os.chdir(dir_was)
     return modules
 
+
 def get_classes(module):
-    return set([x for x in inspect.getmembers(module, inspect.isclass) if (not x[0].startswith("_")) and x[1].__module__ == module.__name__])
+    return set(
+        [
+            x
+            for x in inspect.getmembers(module, inspect.isclass)
+            if (not x[0].startswith("_")) and x[1].__module__ == module.__name__
+        ]
+    )
+
 
 def get_funcs(module):
-    return set([x for x in inspect.getmembers(module, inspect.isfunction) if (not x[0].startswith("_")) and x[1].__module__ == module.__name__])
+    return set(
+        [
+            x
+            for x in inspect.getmembers(module, inspect.isfunction)
+            if (not x[0].startswith("_")) and x[1].__module__ == module.__name__
+        ]
+    )
+
 
 def get_available_funcs(module):
     shared_root = module.__name__.split(".")[0]
-    return set([x for x in inspect.getmembers(module, inspect.isfunction) if (not x[0].startswith("_")) and x[1].__module__.split(".")[0] == shared_root])
+    return set(
+        [
+            x
+            for x in inspect.getmembers(module, inspect.isfunction)
+            if (not x[0].startswith("_"))
+            and x[1].__module__.split(".")[0] == shared_root
+        ]
+    )
+
 
 def get_available_classes(module):
     shared_root = module.__name__.split(".")[0]
-    return set([x for x in inspect.getmembers(module, inspect.isclass) if (not x[0].startswith("_")) and x[1].__module__.split(".")[0] == shared_root])
+    return set(
+        [
+            x
+            for x in inspect.getmembers(module, inspect.isclass)
+            if (not x[0].startswith("_"))
+            and x[1].__module__.split(".")[0] == shared_root
+        ]
+    )
+
 
 def fix_footnotes(s):
     return re.subn("\[([0-9]+)\]_", r"[^\1]", s)[0]
@@ -67,10 +105,10 @@ def mangle_types(types):
         no_curls = re.subn("[a-zA-Z]+\[.+\],?", "", no_curls)[0]
         ts = [t.strip() for t in no_curls.split(",")]
         ts = [t.split(" or ") for t in ts]
-        ts =  [item for sublist in ts for item in sublist if item != ""]
+        ts = [item for sublist in ts for item in sublist if item != ""]
         types = ts + curlied + annotated
         for ix, typ in enumerate(types):
-            ts = [f"``{t}``" for t in  typ.split(" of ")]
+            ts = [f"``{t}``" for t in typ.split(" of ")]
             mangled.append(" of ".join(ts))
     except Exception as e:
         print(e)
@@ -106,22 +144,25 @@ def mangle_examples(examples):
     lines.append("\n\n")
     return lines
 
+
 def notes_section(doc):
     lines = []
-    if 'Notes' in doc and len(doc['Notes']) > 0:             
+    if "Notes" in doc and len(doc["Notes"]) > 0:
         lines.append("!!! note\n")
         lines.append(f"    {' '.join(doc['Notes'])}\n\n")
     return lines
 
-'.. [1] http://barabasi.com/f/618.pdf'
-                     
+
+".. [1] http://barabasi.com/f/618.pdf"
+
+
 def refs_section(doc):
     lines = []
-    if 'References' in doc and len(doc['References']) > 0:
+    if "References" in doc and len(doc["References"]) > 0:
         print("Found refs")
-        for ref in doc['References']:
+        for ref in doc["References"]:
             print(ref)
-            ref_num = re.findall("\[([0-9]+)\]", ref)[0] 
+            ref_num = re.findall("\[([0-9]+)\]", ref)[0]
             print(ref_num)
             ref_body = " ".join(ref.split(" ")[2:])
             print(f"[^{ref_num}] {ref_body}" + "\n")
@@ -129,12 +170,13 @@ def refs_section(doc):
             print(lines)
     return lines
 
+
 def examples_section(doc, header_level):
     lines = []
-    if 'Examples' in doc and len(doc['Examples']) > 0:             
+    if "Examples" in doc and len(doc["Examples"]) > 0:
         lines.append(f"{'#'*(header_level+1)} Examples \n")
-        egs = '\n'.join(doc['Examples'])
-        lines += mangle_examples(doc['Examples'])
+        egs = "\n".join(doc["Examples"])
+        lines += mangle_examples(doc["Examples"])
     return lines
 
 
@@ -142,10 +184,10 @@ def returns_section(thing, doc, header_level):
     lines = []
     return_type = None
     try:
-        return_type = thing.__annotations__['return']
+        return_type = thing.__annotations__["return"]
     except AttributeError:
         try:
-            return_type = thing.fget.__annotations__['return']
+            return_type = thing.fget.__annotations__["return"]
         except:
             pass
     except KeyError:
@@ -155,16 +197,20 @@ def returns_section(thing, doc, header_level):
     else:
         print(f"{thing} has annotated return type {return_type}")
         try:
-            return_type = f"{return_type.__name__}" if return_type.__module__ == "builtins" else f"{return_type.__module__}.{return_type.__name__}"
+            return_type = (
+                f"{return_type.__name__}"
+                if return_type.__module__ == "builtins"
+                else f"{return_type.__module__}.{return_type.__name__}"
+            )
         except AttributeError:
             return_type = str(return_type)
         print(return_type)
 
     try:
-        if 'Returns' in doc and len(doc['Returns']) > 0 or return_type != "":
+        if "Returns" in doc and len(doc["Returns"]) > 0 or return_type != "":
             lines.append(f"{'#'*(header_level+1)} Returns\n")
-            if return_type != "" and len(doc['Returns']) == 1:
-                name, typ, desc = doc['Returns'][0]
+            if return_type != "" and len(doc["Returns"]) == 1:
+                name, typ, desc = doc["Returns"][0]
                 if typ != "":
                     lines.append(f"- `{name}`: ``{return_type}``")
                 else:
@@ -176,10 +222,10 @@ def returns_section(thing, doc, header_level):
                 lines.append(f"- ``{return_type}``")
                 lines.append("\n\n")
             else:
-                for name, typ, desc in doc['Returns']:
+                for name, typ, desc in doc["Returns"]:
                     if ":" in name:
                         name, typ = name.split(":")
-                    
+
                     if typ != "":
                         line = f"- `{name}`: {mangle_types(typ)}"
                     else:
@@ -192,15 +238,17 @@ def returns_section(thing, doc, header_level):
         print(doc)
     return lines
 
+
 def summary(doc):
     lines = []
-    if 'Summary' in doc and len(doc['Summary']) > 0:
-        lines.append(fix_footnotes(" ".join(doc['Summary'])))
+    if "Summary" in doc and len(doc["Summary"]) > 0:
+        lines.append(fix_footnotes(" ".join(doc["Summary"])))
         lines.append("\n")
-    if 'Extended Summary' in doc and len(doc['Extended Summary']) > 0:
-        lines.append(fix_footnotes(" ".join(doc['Extended Summary'])))
+    if "Extended Summary" in doc and len(doc["Extended Summary"]) > 0:
+        lines.append(fix_footnotes(" ".join(doc["Extended Summary"])))
         lines.append("\n")
     return lines
+
 
 def params_section(thing, doc, header_level):
     lines = []
@@ -215,13 +263,17 @@ def params_section(thing, doc, header_level):
             annotations = dict(annot_src.fget.__annotations__)
         except:
             pass
-    annotations.pop('return', None)
+    annotations.pop("return", None)
 
-    class_doc = doc['Parameters']
-    return type_list(annotations, class_doc, '#'*(header_level+1) + " Parameters\n\n")
+    class_doc = doc["Parameters"]
+    return type_list(
+        annotations, class_doc, "#" * (header_level + 1) + " Parameters\n\n"
+    )
+
 
 def escape(string):
     return string.replace("_", "\\_")
+
 
 def get_source_link(thing, source_location):
     try:
@@ -237,7 +289,10 @@ def get_source_link(thing, source_location):
             thing_file += "/__init__.py"
         else:
             thing_file += ".py"
-        return f"Source: [{escape(thing_file)}]({source_location}/{thing_file}#L{lineno})" + "\n\n"
+        return (
+            f"Source: [{escape(thing_file)}]({source_location}/{thing_file}#L{lineno})"
+            + "\n\n"
+        )
     except Exception as e:
         print("Failed to find source file.")
         print(e)
@@ -249,15 +304,20 @@ def get_source_link(thing, source_location):
         pass
     return ""
 
+
 def get_signature(name, thing):
     if inspect.ismodule(thing):
         return ""
     try:
         try:
             try:
-                func_sig = black.format_str(f"{name}{inspect.signature(thing)}", 80).strip()
+                func_sig = black.format_str(
+                    f"{name}{inspect.signature(thing)}", 80
+                ).strip()
             except TypeError:
-                func_sig = black.format_str(f"{name}{inspect.signature(thing.fget)}", 80).strip()
+                func_sig = black.format_str(
+                    f"{name}{inspect.signature(thing.fget)}", 80
+                ).strip()
         except ValueError:
             try:
                 func_sig = f"{name}{inspect.signature(thing)}"
@@ -276,6 +336,7 @@ def get_names(names, types):
             pass
     return names.split(","), types
 
+
 def type_list(annotations, doc, header):
     lines = []
     docced = set()
@@ -288,7 +349,11 @@ def type_list(annotations, doc, header):
                 docced.add(name)
                 if name in annotations:
                     typ = annotations[name]
-                    type_string = f"{typ.__name__}" if typ.__module__ == "builtins" else f"{typ.__module__}.{typ.__name__}"
+                    type_string = (
+                        f"{typ.__name__}"
+                        if typ.__module__ == "builtins"
+                        else f"{typ.__module__}.{typ.__name__}"
+                    )
                     lines.append(f"- `{name}`: ``{type_string}``")
                 else:
                     unannotated.append(name)
@@ -302,7 +367,11 @@ def type_list(annotations, doc, header):
     if len(annotations) > 0:
         for name, typ in annotations.items():
             if name not in docced:
-                type_string = f"{typ.__name__}" if typ.__module__ == "builtins" else f"{typ.__module__}.{typ.__name__}"
+                type_string = (
+                    f"{typ.__name__}"
+                    if typ.__module__ == "builtins"
+                    else f"{typ.__module__}.{typ.__name__}"
+                )
                 lines.append(f"- `{name}`: ``{type_string}``")
                 lines.append("\n\n")
     return lines
@@ -311,7 +380,9 @@ def type_list(annotations, doc, header):
 def split_props(thing, doc):
     props = inspect.getmembers(thing, lambda o: isinstance(o, property))
     ps = []
-    docs = [(*get_names(names, types), names, types, desc) for names, types, desc in doc]
+    docs = [
+        (*get_names(names, types), names, types, desc) for names, types, desc in doc
+    ]
     for prop_name, prop in props:
         in_doc = [d for d in enumerate(docs) if prop_name in d[0]]
         for d in in_doc:
@@ -321,6 +392,7 @@ def split_props(thing, doc):
         _, _, names, types, descs = zip(*docs)
         return ps, zip(names, types, descs)
     return ps, []
+
 
 def attributes_section(thing, doc, header_level):
     # Get Attributes
@@ -334,13 +406,13 @@ def attributes_section(thing, doc, header_level):
     except AttributeError:
         pass
 
-    props, class_doc = split_props(thing, doc['Attributes'])
-    annotations.pop('return', None)
+    props, class_doc = split_props(thing, doc["Attributes"])
+    annotations.pop("return", None)
     tl = type_list(annotations, class_doc, "\n### Attributes\n\n")
     if len(tl) == 0 and len(props) > 0:
         tl.append("\n### Attributes\n\n")
     for prop in props:
-        tl.append(f'- [`{prop}`](#{prop})\n\n')
+        tl.append(f"- [`{prop}`](#{prop})\n\n")
     return tl
 
 
@@ -349,9 +421,11 @@ def to_doc(name, thing, header_level, source_location):
         header = f"{'#'*header_level} Class **{name}**\n\n"
     else:
         header = f"{'#'*header_level} {name}\n\n"
-    lines = [header]
-    lines.append(get_signature(name, thing))
-    lines.append(get_source_link(thing, source_location))
+    lines = [
+        header,
+        get_signature(name, thing),
+        get_source_link(thing, source_location),
+    ]
 
     try:
         doc = NumpyDocString(inspect.getdoc(thing))._parsed_data
@@ -359,7 +433,7 @@ def to_doc(name, thing, header_level, source_location):
         lines += attributes_section(thing, doc, header_level)
         lines += params_section(thing, doc, header_level)
         lines += returns_section(thing, doc, header_level)
-        lines += examples_section(doc, header_level)  
+        lines += examples_section(doc, header_level)
         lines += notes_section(doc)
         lines += refs_section(doc)
     except Exception as e:
@@ -386,7 +460,7 @@ def make_api_doc(module_name, output_dir, source_location):
         else:
             doc_path = path / "index.md"
         doc_path.parent.mkdir(parents=True, exist_ok=True)
-        module_path = '/'.join(module.__name__.split('.'))
+        module_path = "/".join(module.__name__.split("."))
         with open(doc_path.absolute(), "w") as index:
             module_doc = module.__doc__
 
@@ -400,8 +474,14 @@ def make_api_doc(module_name, output_dir, source_location):
                 lines = to_doc(cls_name, cls, 2, source_location)
                 index.writelines(lines)
 
-                class_methods = [x for x in inspect.getmembers(cls, inspect.isfunction) if (not x[0].startswith("_"))]
-                class_methods += inspect.getmembers(cls, lambda o: isinstance(o, property))
+                class_methods = [
+                    x
+                    for x in inspect.getmembers(cls, inspect.isfunction)
+                    if (not x[0].startswith("_"))
+                ]
+                class_methods += inspect.getmembers(
+                    cls, lambda o: isinstance(o, property)
+                )
                 if len(class_methods) > 0:
                     index.write("### Methods \n\n")
                     for method_name, method in class_methods:
