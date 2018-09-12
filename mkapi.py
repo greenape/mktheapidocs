@@ -235,13 +235,9 @@ def make_api_doc(module_name, output_dir, source_location):
             doc_path = path / "index.md"
         doc_path.parent.mkdir(parents=True, exist_ok=True)
         module_path = '/'.join(module.__name__.split('.'))
-        module_file_url = f"{source_location}/tree/master/{module_path}.py" if leaf else f"{module_path}/__init__.py"
+        module_file_url = f"{source_location}/tree/master/{module_path}.py" if leaf else f"{source_location}/tree/master/{module_path}/__init__.py"
         with open(doc_path.absolute(), "w") as index:
             module_doc = module.__doc__
-            index.write(f"source: {module_path}")
-            if leaf:
-                index.write(".py")
-            index.write("\n")
 
             # Module overview documentation
             if module_doc is not None:
