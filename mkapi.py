@@ -203,7 +203,7 @@ def to_doc(name, thing, header_level, source_location):
     except:
         pass
     try:
-        doc = NumpyDocString(thing.__doc__)._parsed_data
+        doc = NumpyDocString(inspect.getdoc(thing))._parsed_data
         lines += summary(doc)
         lines += params_section(doc, header_level)
         lines += returns_section(doc, header_level)
