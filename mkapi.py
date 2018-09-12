@@ -196,9 +196,13 @@ def to_doc(name, thing, header_level, source_location):
     try:
         lineno = get_line(thing)
         try:
-            thing_file = "/".join(inspect.getmodule(thing).__name__.split(".")) + ".py"
+            owner_module = inspect.getmodule(thing)
         except TypeError:
-            thing_file = "/".join(inspect.getmodule(thing.fget).__name__.split(".")) + ".py"
+            owner_module = inspect.getmodule(thing.fget)
+        if module_file_url.endswith("__init__.py"):
+            thing_file = "/".join(inspect.getmodule(thing).__name__.split(".")) + "/\_\_init\_\_.py"
+        else:
+            thing_file = "/".join(inspect.getmodule(thing).__name__.split(".")) + ".py"
         lines.append(f"Source: [{thing_file}]({source_location}#L{lineno})" + "\n\n")
     except:
         pass
@@ -235,7 +239,7 @@ def make_api_doc(module_name, output_dir, source_location):
             doc_path = path / "index.md"
         doc_path.parent.mkdir(parents=True, exist_ok=True)
         module_path = '/'.join(module.__name__.split('.'))
-        module_file_url = f"{source_location}/tree/master/{module_path}.py" if leaf else f"{source_location}/tree/master/{module_path}/__init__.py"
+        module_file_url = f"{source_location}/{module_path}.py" if leaf else f"{source_location}/{module_path}/__init__.py"
         with open(doc_path.absolute(), "w") as index:
             module_doc = module.__doc__
 
