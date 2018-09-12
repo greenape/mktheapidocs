@@ -211,7 +211,7 @@ def to_doc(name, thing, header_level, source_location):
         lines += notes_section(doc)
         lines += refs_section(doc)
     except Exception as e:
-        print(f"No docstring for {thing}: {e}")
+        print(f"No docstring for {name}, src {source_location}: {e}")
     return lines
 
 
