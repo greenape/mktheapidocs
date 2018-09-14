@@ -445,6 +445,10 @@ def to_doc(name, thing, header_level, source_location):
 @click.argument("module_name")
 @click.argument("output_dir")
 @click.argument("source-location")
+def cli(module_name, output_dir, source_location):
+    make_api_doc(module_name, output_dir, source_location)
+
+
 def make_api_doc(module_name, output_dir, source_location):
     module = importlib.import_module(module_name)
     output_dir = pathlib.Path(output_dir).absolute()
@@ -493,4 +497,4 @@ def make_api_doc(module_name, output_dir, source_location):
 
 
 if __name__ == "__main__":
-    make_api_doc()
+    cli()
