@@ -6,23 +6,7 @@ class PyDocFile(mkdocs.structure.files.File):
     def __init__(self, path, src_dir, dest_dir, use_directory_urls, parent):
         self.parent = parent
         super().__init__(path, src_dir, dest_dir, use_directory_urls)
-
-    def _get_dest_path(self, use_directory_urls):
-        """ Return destination path based on source path. """
-        if self.is_documentation_page():
-            if use_directory_urls:
-                parent, filename = os.path.split(self.src_path)
-                if self.name == 'index':
-                    # index.md or README.md => index.html
-                    return os.path.join(self.parent, parent, 'index.html')
-                else:
-                    # foo.md => foo/index.html
-                    return os.path.join(self.parent, parent, self.name, 'index.html')
-            else:
-                # foo.md => foo.html
-                root, ext = os.path.splitext(self.src_path)
-                return os.path.join(self.parent, root + '.html')
-        return os.path.join(self.parent, self.src_path)
+        self.abs_src_path = self.parent
 
     def is_documentation_page(self):
         return True
@@ -57,13 +41,14 @@ class Plugin(mkdocs.plugins.BasePlugin):
     def on_config(self, config):
         print(config)
         self.files = {}
+        self.module_files = {}
         for module_name, target, source_location in self.config['modules']:
             module = importlib.import_module(module_name)
             src_path = pathlib.Path(module.__file__).parent.parent.absolute()
             target_path = pathlib.Path(config['site_dir'])
             for module, file in get_submodule_files(module):
                 do_doc = functools.partial(doc_module, module.__name__, module, "", source_location, file.stem != "__init__.py")
-                f = PyDocFile(file, src_path, target_path, True, target)
+                f = PyDocFile(target / file, src_path, target_path, True, pathlib.Path(module.__file__).absolute())
                 #print(f.__dict__)
                 #print()
                 self.files[f.url] = (f, do_doc)
