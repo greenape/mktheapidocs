@@ -1,5 +1,6 @@
 import inspect, os, pathlib, importlib, black, re, click
 from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
+from functools import cmp_to_key
 
 
 def get_line(thing):
@@ -12,6 +13,22 @@ def get_line(thing):
         # print(thing)
         raise e
 
+
+def _sort_modules(mods):
+    """ Always sort `index` or `README` as first filename in list. """
+
+    def compare(x, y):
+        x = x[1]
+        y = y[1]
+        if x == y:
+            return 0
+        if y.stem == "__init__.py":
+            return 1
+        if x.stem == "__init__.py" or x < y:
+            return -1
+        return 1
+
+    return sorted(mods, key=cmp_to_key(compare))
 
 def get_submodule_files(module, hide=["_version"]):
     modules = set()
@@ -31,7 +48,7 @@ def get_submodule_files(module, hide=["_version"]):
                         modules.add((submodule, module_path / file))
             except ModuleNotFoundError:
                 print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
-    return modules
+    return _sort_modules(modules)
 
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     modules = set()
