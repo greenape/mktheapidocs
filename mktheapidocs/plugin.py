@@ -39,14 +39,16 @@ class Plugin(mkdocs.plugins.BasePlugin):
     )
 
     def on_config(self, config):
-        print(config)
+        #print(config)
         self.files = {}
         self.module_files = {}
         for module_name, target, source_location in self.config['modules']:
             module = importlib.import_module(module_name)
+            importlib.reload(module)
             src_path = pathlib.Path(module.__file__).parent.parent.absolute()
             target_path = pathlib.Path(config['site_dir'])
             for module, file in get_submodule_files(module):
+                importlib.reload(module)
                 do_doc = functools.partial(doc_module, module.__name__, module, "", source_location, file.stem != "__init__.py")
                 f = PyDocFile(target / file, src_path, target_path, True, pathlib.Path(module.__file__).absolute())
                 #print(f.__dict__)
@@ -60,31 +62,32 @@ class Plugin(mkdocs.plugins.BasePlugin):
         return files
 
     def on_nav(self, nav, config, files):
-        print(nav.__dict__)
+        #print(nav.__dict__)
         return nav
 
 
     def on_page_read_source(self, eh, page, config):
         try:
             f, sf = self.files[page.url]
-            print(page.__dict__)
-            print()
+            #print(page.__dict__)
+            #print()
             return sf()[1]
         except KeyError:
             try:
                 with open(page.file.abs_src_path) as fin:
                     return fin.read()
             except Exception as e:
-                print(page.file.__dict__)
-                print(e)
+                #print(page.file.__dict__)
+                #print(e)
                 return ""
 
     #def on_pre_build(self, config):
     #    root_path = pathlib.Path(config['docs_dir'])
     #    self.files = list(chain(*[make_api_doc(module_name, root_path / target, source_location) for module_name, target, source_location in self.config['modules']]))
 
-    #def on_serve(self, server, config):
-    #    print(server.__dict__)
-    #    print(config)
-    #    for file, func in self.files:
-    #        server.watch(str(file.absolute()), func)
+    def on_serve(self, server, config):
+        #print(server.__dict__)
+        #print(config)
+        builder = server.watcher._tasks[config['docs_dir']]['func']
+        for file, func in self.files.values():
+            server.watch(str(file.abs_src_path), builder)
