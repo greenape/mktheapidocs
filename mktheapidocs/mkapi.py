@@ -1,5 +1,6 @@
 import inspect, os, pathlib, importlib, black, re, click
 from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
+from functools import cmp_to_key
 
 
 def get_line(thing):
@@ -9,8 +10,46 @@ def get_line(thing):
         # Might be a property
         return inspect.getsourcelines(thing.fget)[1]
     except Exception as e:
-        print(thing)
+        # print(thing)
         raise e
+
+
+def _sort_modules(mods):
+    """ Always sort `index` or `README` as first filename in list. """
+
+    def compare(x, y):
+        x = x[1]
+        y = y[1]
+        if x == y:
+            return 0
+        if y.stem == "__init__.py":
+            return 1
+        if x.stem == "__init__.py" or x < y:
+            return -1
+        return 1
+
+    return sorted(mods, key=cmp_to_key(compare))
+
+
+def get_submodule_files(module, hide=["_version"]):
+    modules = set()
+    module_file = pathlib.Path(module.__file__).parent
+    for root, dirs, files in os.walk(module_file):
+        module_path = pathlib.Path(root).relative_to(module_file.parent)
+        if not module_path.parts[-1].startswith("_"):
+            try:
+                for file in files:
+                    module_name = (
+                        "" if "__init__.py" == file else inspect.getmodulename(file)
+                    )
+                    if module_name is not None and module_name not in hide:
+                        submodule = importlib.import_module(
+                            ".".join((module_path / module_name).parts)
+                        )
+                        modules.add((submodule, module_path / file))
+            except ModuleNotFoundError:
+                print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
+    return _sort_modules(modules)
 
 
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
@@ -24,7 +63,7 @@ def get_all_modules_from_files(module, hide=["__init__", "_version"]):
             try:
                 module = importlib.import_module(".".join(module_path.parts))
                 if not module.__name__.startswith("_"):
-                    modules.add((module.__name__, module, False))
+                    modules.add((module.__name__, module, False, module_path))
                     for file in files:
                         module_name = inspect.getmodulename(file)
                         if module_name is not None and module_name not in hide:
@@ -36,7 +75,14 @@ def get_all_modules_from_files(module, hide=["__init__", "_version"]):
                             if not module.__name__.startswith(
                                 "_"
                             ) and not submodule.__name__.startswith("_"):
-                                modules.add((submodule.__name__, submodule, True))
+                                modules.add(
+                                    (
+                                        submodule.__name__,
+                                        submodule,
+                                        True,
+                                        module_path.absolute() / file,
+                                    )
+                                )
             except ModuleNotFoundError:
                 print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
     os.chdir(dir_was)
@@ -111,9 +157,9 @@ def mangle_types(types):
             ts = [f"``{t}``" for t in typ.split(" of ")]
             mangled.append(" of ".join(ts))
     except Exception as e:
-        print(e)
-        print(default)
-        print(types)
+        # print(e)
+        # print(default)
+        # print(types)
         raise e
     output = reversed(mangled)
 
@@ -159,15 +205,15 @@ def notes_section(doc):
 def refs_section(doc):
     lines = []
     if "References" in doc and len(doc["References"]) > 0:
-        print("Found refs")
+        # print("Found refs")
         for ref in doc["References"]:
-            print(ref)
+            # print(ref)
             ref_num = re.findall("\[([0-9]+)\]", ref)[0]
-            print(ref_num)
+            # print(ref_num)
             ref_body = " ".join(ref.split(" ")[2:])
-            print(f"[^{ref_num}] {ref_body}" + "\n")
+            # print(f"[^{ref_num}] {ref_body}" + "\n")
             lines.append(f"[^{ref_num}]: {ref_body}" + "\n\n")
-            print(lines)
+            # print(lines)
     return lines
 
 
@@ -195,7 +241,7 @@ def returns_section(thing, doc, header_level):
     if return_type is None:
         return_type = ""
     else:
-        print(f"{thing} has annotated return type {return_type}")
+        # print(f"{thing} has annotated return type {return_type}")
         try:
             return_type = (
                 f"{return_type.__name__}"
@@ -204,7 +250,7 @@ def returns_section(thing, doc, header_level):
             )
         except AttributeError:
             return_type = str(return_type)
-        print(return_type)
+        # print(return_type)
 
     try:
         if "Returns" in doc and len(doc["Returns"]) > 0 or return_type != "":
@@ -234,8 +280,9 @@ def returns_section(thing, doc, header_level):
                     lines.append(line)
                     lines.append(f"    {' '.join(desc)}\n\n")
     except Exception as e:
-        print(e)
-        print(doc)
+        # print(e)
+        # print(doc)
+        pass
     return lines
 
 
@@ -294,13 +341,13 @@ def get_source_link(thing, source_location):
             + "\n\n"
         )
     except Exception as e:
-        print("Failed to find source file.")
-        print(e)
-        print(lineno)
-        print(thing)
-        print(owner_module)
-        print(thing_file)
-        print(source_location)
+        # print("Failed to find source file.")
+        # print(e)
+        # print(lineno)
+        # print(thing)
+        # print(owner_module)
+        # print(thing_file)
+        # print(source_location)
         pass
     return ""
 
@@ -437,60 +484,76 @@ def to_doc(name, thing, header_level, source_location):
         lines += notes_section(doc)
         lines += refs_section(doc)
     except Exception as e:
-        print(f"No docstring for {name}, src {source_location}: {e}")
+        # print(f"No docstring for {name}, src {source_location}: {e}")
+        pass
     return lines
+
+
+def doc_module(module_name, module, output_dir, source_location, leaf):
+    path = pathlib.Path(output_dir).joinpath(*module.__name__.split("."))
+    available_classes = get_available_classes(module)
+    deffed_classes = get_classes(module)
+    deffed_funcs = get_funcs(module)
+    alias_funcs = available_classes - deffed_classes
+    if leaf:
+        doc_path = path.with_suffix(".md")
+    else:
+        doc_path = path / "index.md"
+    doc_path.parent.mkdir(parents=True, exist_ok=True)
+    module_path = "/".join(module.__name__.split("."))
+    doc = [f"title: {module_name.split('.')[-1]}" + "\n"]
+    module_doc = module.__doc__
+
+    # Module overview documentation
+    if module_doc is not None:
+        doc += to_doc(module.__name__, module, 1, source_location)
+    else:
+        doc.append(f"# {module.__name__}\n\n")
+    doc.append("\n\n")
+    for cls_name, cls in sorted(deffed_classes):
+        doc += to_doc(cls_name, cls, 2, source_location)
+
+        class_methods = [
+            x
+            for x in inspect.getmembers(cls, inspect.isfunction)
+            if (not x[0].startswith("_"))
+        ]
+        class_methods += inspect.getmembers(cls, lambda o: isinstance(o, property))
+        if len(class_methods) > 0:
+            doc.append("### Methods \n\n")
+            for method_name, method in class_methods:
+                doc += to_doc(method_name, method, 4, source_location)
+    for fname, func in sorted(deffed_funcs):
+        doc += to_doc(fname, func, 2, source_location)
+    return doc_path.absolute(), "".join(doc)
 
 
 @click.command()
 @click.argument("module_name")
 @click.argument("output_dir")
 @click.argument("source-location")
+def cli(module_name, output_dir, source_location):
+    make_api_doc(module_name, output_dir, source_location)
+
+
 def make_api_doc(module_name, output_dir, source_location):
     module = importlib.import_module(module_name)
     output_dir = pathlib.Path(output_dir).absolute()
-    for module_name, module, leaf in get_all_modules_from_files(module):
-        print(module_name)
-        path = pathlib.Path(output_dir).joinpath(*module.__name__.split("."))
-        available_classes = get_available_classes(module)
-        deffed_classes = get_classes(module)
-        deffed_funcs = get_funcs(module)
-        alias_funcs = available_classes - deffed_classes
-        if leaf:
-            doc_path = path.with_suffix(".md")
-        else:
-            doc_path = path / "index.md"
-        doc_path.parent.mkdir(parents=True, exist_ok=True)
-        module_path = "/".join(module.__name__.split("."))
-        with open(doc_path.absolute(), "w") as index:
-            module_doc = module.__doc__
+    files = []
+    for module_name, module, leaf, file in get_all_modules_from_files(module):
+        # print(module_name)
+        def do_doc():
+            doc_path, doc = doc_module(
+                module_name, module, output_dir, source_location, leaf
+            )
+            with open(doc_path.absolute(), "w") as doc_file:
+                doc_file.write(doc)
 
-            # Module overview documentation
-            if module_doc is not None:
-                index.writelines(to_doc(module.__name__, module, 1, source_location))
-            else:
-                index.write(f"# {module.__name__}\n\n")
-            index.write("\n\n")
-            for cls_name, cls in sorted(deffed_classes):
-                lines = to_doc(cls_name, cls, 2, source_location)
-                index.writelines(lines)
-
-                class_methods = [
-                    x
-                    for x in inspect.getmembers(cls, inspect.isfunction)
-                    if (not x[0].startswith("_"))
-                ]
-                class_methods += inspect.getmembers(
-                    cls, lambda o: isinstance(o, property)
-                )
-                if len(class_methods) > 0:
-                    index.write("### Methods \n\n")
-                    for method_name, method in class_methods:
-                        lines = to_doc(method_name, method, 4, source_location)
-                        index.writelines(lines)
-            for fname, func in sorted(deffed_funcs):
-                lines = to_doc(fname, func, 2, source_location)
-                index.writelines(lines)
+        do_doc()
+        files.append((file, do_doc))
+        print(f"Built documentation for {file.absolute()}")
+    return files
 
 
 if __name__ == "__main__":
-    make_api_doc()
+    cli()
