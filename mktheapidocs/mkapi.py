@@ -30,6 +30,7 @@ def _sort_modules(mods):
 
     return sorted(mods, key=cmp_to_key(compare))
 
+
 def get_submodule_files(module, hide=["_version"]):
     modules = set()
     module_file = pathlib.Path(module.__file__).parent
@@ -38,17 +39,18 @@ def get_submodule_files(module, hide=["_version"]):
         if not module_path.parts[-1].startswith("_"):
             try:
                 for file in files:
-                    module_name = "" if "__init__.py" == file else inspect.getmodulename(file)
+                    module_name = (
+                        "" if "__init__.py" == file else inspect.getmodulename(file)
+                    )
                     if module_name is not None and module_name not in hide:
                         submodule = importlib.import_module(
-                            ".".join(
-                                (module_path / module_name).parts
-                            )
+                            ".".join((module_path / module_name).parts)
                         )
                         modules.add((submodule, module_path / file))
             except ModuleNotFoundError:
                 print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
     return _sort_modules(modules)
+
 
 def get_all_modules_from_files(module, hide=["__init__", "_version"]):
     modules = set()
@@ -73,7 +75,14 @@ def get_all_modules_from_files(module, hide=["__init__", "_version"]):
                             if not module.__name__.startswith(
                                 "_"
                             ) and not submodule.__name__.startswith("_"):
-                                modules.add((submodule.__name__, submodule, True, module_path.absolute() / file))
+                                modules.add(
+                                    (
+                                        submodule.__name__,
+                                        submodule,
+                                        True,
+                                        module_path.absolute() / file,
+                                    )
+                                )
             except ModuleNotFoundError:
                 print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
     os.chdir(dir_was)
@@ -509,9 +518,7 @@ def doc_module(module_name, module, output_dir, source_location, leaf):
             for x in inspect.getmembers(cls, inspect.isfunction)
             if (not x[0].startswith("_"))
         ]
-        class_methods += inspect.getmembers(
-            cls, lambda o: isinstance(o, property)
-        )
+        class_methods += inspect.getmembers(cls, lambda o: isinstance(o, property))
         if len(class_methods) > 0:
             doc.append("### Methods \n\n")
             for method_name, method in class_methods:
@@ -536,9 +543,12 @@ def make_api_doc(module_name, output_dir, source_location):
     for module_name, module, leaf, file in get_all_modules_from_files(module):
         # print(module_name)
         def do_doc():
-            doc_path, doc = doc_module(module_name, module, output_dir, source_location, leaf)
+            doc_path, doc = doc_module(
+                module_name, module, output_dir, source_location, leaf
+            )
             with open(doc_path.absolute(), "w") as doc_file:
                 doc_file.write(doc)
+
         do_doc()
         files.append((file, do_doc))
         print(f"Built documentation for {file.absolute()}")
