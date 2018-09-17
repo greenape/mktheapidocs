@@ -93,13 +93,7 @@ class Plugin(mkdocs.plugins.BasePlugin):
             # print()
             return sf()[1]
         except KeyError:
-            try:
-                with open(page.file.abs_src_path) as fin:
-                    return fin.read()
-            except Exception as e:
-                # print(page.file.__dict__)
-                # print(e)
-                return ""
+            return None
 
     # def on_pre_build(self, config):
     #    root_path = pathlib.Path(config['docs_dir'])
