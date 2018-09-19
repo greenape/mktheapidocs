@@ -1,4 +1,4 @@
-import inspect, os, pathlib, importlib, black, re, click
+import inspect, os, pathlib, importlib, black, re, click, enum
 from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
 from functools import cmp_to_key
 
@@ -94,7 +94,7 @@ def get_classes(module):
         [
             x
             for x in inspect.getmembers(module, inspect.isclass)
-            if (not x[0].startswith("_")) and x[1].__module__ == module.__name__
+            if (not x[0].startswith("_")) and x[1].__module__ == module.__name__ and not type(x[1]) is enum.EnumMeta
         ]
     )
 
@@ -499,6 +499,27 @@ def _get_names(names, types):
             pass
     return names.split(","), types
 
+def string_annotation(typ):
+    """
+    Construct a string representation of a type annotation.
+
+    Parameters
+    ----------
+    typ : type
+        Type to turn into a string
+
+    Returns
+    -------
+    str
+        String version of the type annotation
+    """
+
+    try:
+        return f"{typ.__name__}" if typ.__module__ == "builtins" else f"{typ.__module__}.{typ.__name__}"
+    except AttributeError:
+        return str(typ)
+
+
 
 def type_list(annotations, doc, header):
     """
@@ -528,11 +549,7 @@ def type_list(annotations, doc, header):
                 docced.add(name)
                 if name in annotations:
                     typ = annotations[name]
-                    type_string = (
-                        f"{typ.__name__}"
-                        if typ.__module__ == "builtins"
-                        else f"{typ.__module__}.{typ.__name__}"
-                    )
+                    type_string = string_annotation(typ)
                     lines.append(f"- `{name}`: ``{type_string}``")
                 else:
                     unannotated.append(name)
@@ -546,11 +563,7 @@ def type_list(annotations, doc, header):
     if len(annotations) > 0:
         for name, typ in annotations.items():
             if name not in docced:
-                type_string = (
-                    f"{typ.__name__}"
-                    if typ.__module__ == "builtins"
-                    else f"{typ.__module__}.{typ.__name__}"
-                )
+                type_string = string_annotation(typ)
                 lines.append(f"- `{name}`: ``{type_string}``")
                 lines.append("\n\n")
     return lines
