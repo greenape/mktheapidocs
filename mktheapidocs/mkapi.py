@@ -99,6 +99,16 @@ def get_classes(module):
     )
 
 
+def get_enums(module):
+    return set(
+        [
+            x
+            for x in inspect.getmembers(module, inspect.isclass)
+            if (not x[0].startswith("_")) and x[1].__module__ == module.__name__ and type(x[1]) is enum.EnumMeta
+        ]
+    )
+
+
 def get_funcs(module):
     return set(
         [
@@ -629,6 +639,21 @@ def attributes_section(thing, doc, header_level):
         tl.append(f"- [`{prop}`](#{prop})\n\n")
     return tl
 
+def enum_doc(name, enum, header_level, source_location):
+    lines = [f"{'#'*header_level} Enum **{name}**\n\n"]
+    lines.append(f"```python\n{name}\n```\n")
+    lines.append(get_source_link(enum, source_location))
+    try:
+        doc = NumpyDocString(inspect.getdoc(thing))._parsed_data
+        lines += summary(doc)
+    except:
+        pass
+    lines.append(f"{'#'*(header_level + 1)} Members\n\n")
+    lines += [f"- `{str(v).split('.').pop()}`: `{v.value}` \n\n" for v in enum]
+    return lines
+
+
+
 
 def to_doc(name, thing, header_level, source_location):
     """
@@ -646,6 +671,8 @@ def to_doc(name, thing, header_level, source_location):
         URL of repo containing source code
     """
 
+    if type(thing) is enum.EnumMeta:
+        return enum_doc(name, thing, header_level, source_location)
     if inspect.isclass(thing):
         header = f"{'#'*header_level} Class **{name}**\n\n"
     else:
@@ -687,6 +714,7 @@ def doc_module(module_name, module, output_dir, source_location, leaf):
     available_classes = get_available_classes(module)
     deffed_classes = get_classes(module)
     deffed_funcs = get_funcs(module)
+    deffed_enums = get_enums(module)
     alias_funcs = available_classes - deffed_classes
     if leaf:
         doc_path = path.with_suffix(".md")
@@ -703,7 +731,7 @@ def doc_module(module_name, module, output_dir, source_location, leaf):
     else:
         doc.append(f"# {module.__name__}\n\n")
     doc.append("\n\n")
-    for cls_name, cls in sorted(deffed_classes):
+    for cls_name, cls in sorted(deffed_enums) + sorted(deffed_classes):
         doc += to_doc(cls_name, cls, 2, source_location)
 
         class_methods = [
