@@ -637,10 +637,7 @@ def attributes_section(thing, doc, header_level):
 
 
     props, class_doc = _split_props(thing, doc["Attributes"])
-    print("class")
-    print(thing)
     tl = type_list(inspect.signature(thing), class_doc, "\n### Attributes\n\n")
-    print(tl)
     if len(tl) == 0 and len(props) > 0:
         tl.append("\n### Attributes\n\n")
     for prop in props:
