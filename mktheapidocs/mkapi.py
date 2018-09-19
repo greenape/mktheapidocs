@@ -369,7 +369,7 @@ def params_section(thing, doc, header_level):
 
     Parameters
     ----------
-    thing : function
+    thing : functuon
         Function to produce parameters from
     doc : dict
         Dict from numpydoc
@@ -382,22 +382,10 @@ def params_section(thing, doc, header_level):
         Markdown for examples section
     """
     lines = []
-    annotations = dict()
-    annot_src = thing
-    if inspect.isclass(thing):
-        annot_src = thing.__init__
-    try:
-        annotations = dict(annot_src.__annotations__)
-    except AttributeError:
-        try:
-            annotations = dict(annot_src.fget.__annotations__)
-        except:
-            pass
-    annotations.pop("return", None)
 
     class_doc = doc["Parameters"]
     return type_list(
-        annotations, class_doc, "#" * (header_level + 1) + " Parameters\n\n"
+        inspect.signature(thing), class_doc, "#" * (header_level + 1) + " Parameters\n\n"
     )
 
 
@@ -509,7 +497,7 @@ def _get_names(names, types):
             pass
     return names.split(","), types
 
-def string_annotation(typ):
+def string_annotation(typ, default):
     """
     Construct a string representation of a type annotation.
 
@@ -517,29 +505,37 @@ def string_annotation(typ):
     ----------
     typ : type
         Type to turn into a string
+    default : any
+        Default value (if any) of the type
 
     Returns
     -------
     str
         String version of the type annotation
     """
-
     try:
-        return f"{typ.__name__}" if typ.__module__ == "builtins" else f"{typ.__module__}.{typ.__name__}"
+        type_string = f"`{typ.__name__}`" if typ.__module__ == "builtins" else f"`{typ.__module__}.{typ.__name__}`"
     except AttributeError:
-        return str(typ)
+        type_string = f"`{str(typ)}`"
+    if default is None:
+        type_string = f"{type_string}, default ``None``"
+    elif default == inspect._empty:
+        pass
+    else:
+        type_string = f"{type_string}, default ``{default}``"
+    return type_string
 
 
 
-def type_list(annotations, doc, header):
+def type_list(signature, doc, header):
     """
     Construct a list of types, preferring type annotations to
     docstrings if they are available.
 
     Parameters
     ----------
-    annotations : dict
-        Dictionary of parameter name -> type annotation
+    signature : Signature
+        Signature of thing
     doc : list of tuple
         Numpydoc's type list section
 
@@ -548,21 +544,27 @@ def type_list(annotations, doc, header):
     list of str
         Markdown formatted type list
     """
+    
     lines = []
     docced = set()
-    if len(annotations) > 0 or len(doc) > 0:
-        lines.append(header)
+    lines.append(header)
+    try:
         for names, types, description in doc:
             names, types = _get_names(names, types)
             unannotated = []
             for name in names:
                 docced.add(name)
-                if name in annotations:
-                    typ = annotations[name]
-                    type_string = string_annotation(typ)
-                    lines.append(f"- `{name}`: ``{type_string}``")
-                else:
-                    unannotated.append(name)
+                try:
+                    typ = signature.parameters[name].annotation
+                    if typ == inspect._empty:
+                        raise AttributeError
+                    default = signature.parameters[name].default
+                    type_string = string_annotation(typ, default)
+                    lines.append(f"- `{name}`: {type_string}")
+                    lines.append("\n\n")
+                except (AttributeError, KeyError):
+                    unannotated.append(name) # No annotation
+                    
             if len(unannotated) > 0:
                 lines.append("- ")
                 lines.append(", ".join(f"`{name}`" for name in unannotated))
@@ -570,12 +572,21 @@ def type_list(annotations, doc, header):
                     lines.append(f": {mangle_types(types)}")
             lines.append("\n\n")
             lines.append(f"    {' '.join(description)}\n\n")
-    if len(annotations) > 0:
-        for name, typ in annotations.items():
-            if name not in docced:
-                type_string = string_annotation(typ)
-                lines.append(f"- `{name}`: ``{type_string}``")
-                lines.append("\n\n")
+        for names, types, description in doc:
+            names, types = _get_names(names, types)
+            for name in names:
+                if name not in docced:
+                    try:
+                        typ = signature.parameters[name].annotation
+                        default = signature.parameters[name].default
+                        type_string = string_annotation(typ, default)
+                        lines.append(f"- `{name}`: {type_string}")
+                        lines.append("\n\n")
+                    except (AttributeError, KeyError):
+                        lines.append(f"- `{name}`")
+                        lines.append("\n\n")
+    except Exception as e:
+        print(e)
     return lines
 
 
@@ -624,15 +635,12 @@ def attributes_section(thing, doc, header_level):
     if not inspect.isclass(thing):
         return []
 
-    annotations = dict()
-    try:
-        annotations = dict(thing.__annotations__)
-    except AttributeError:
-        pass
 
     props, class_doc = _split_props(thing, doc["Attributes"])
-    annotations.pop("return", None)
-    tl = type_list(annotations, class_doc, "\n### Attributes\n\n")
+    print("class")
+    print(thing)
+    tl = type_list(inspect.signature(thing), class_doc, "\n### Attributes\n\n")
+    print(tl)
     if len(tl) == 0 and len(props) > 0:
         tl.append("\n### Attributes\n\n")
     for prop in props:
@@ -640,6 +648,21 @@ def attributes_section(thing, doc, header_level):
     return tl
 
 def enum_doc(name, enum, header_level, source_location):
+    """
+    Generate markdown for an enum
+
+    Parameters
+    ----------
+    name : str
+        Name of the thing being documented
+    enum : EnumMeta
+        Enum to document
+    header_level : int
+        Heading level
+    source_location : str
+        URL of repo containing source code
+    """
+
     lines = [f"{'#'*header_level} Enum **{name}**\n\n"]
     lines.append(f"```python\n{name}\n```\n")
     lines.append(get_source_link(enum, source_location))
