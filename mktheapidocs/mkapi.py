@@ -199,10 +199,21 @@ def notes_section(doc):
     return lines
 
 
-".. [1] http://barabasi.com/f/618.pdf"
-
 
 def refs_section(doc):
+    """
+    Generate a References section.
+
+    Parameters
+    ----------
+    doc : dict
+        Dictionary produced by numpydoc
+
+    Returns
+    -------
+    list of str
+        Markdown for references section
+    """
     lines = []
     if "References" in doc and len(doc["References"]) > 0:
         # print("Found refs")
@@ -218,6 +229,21 @@ def refs_section(doc):
 
 
 def examples_section(doc, header_level):
+    """
+    Generate markdown for Examples section.
+
+    Parameters
+    ----------
+    doc : dict
+        Dict from numpydoc
+    header_level : int
+        Number of `#`s to use for header
+
+    Returns
+    -------
+    list of str
+        Markdown for examples section
+    """
     lines = []
     if "Examples" in doc and len(doc["Examples"]) > 0:
         lines.append(f"{'#'*(header_level+1)} Examples \n")
@@ -227,6 +253,23 @@ def examples_section(doc, header_level):
 
 
 def returns_section(thing, doc, header_level):
+    """
+    Generate markdown for Returns section.
+
+    Parameters
+    ----------
+    thing : function
+        Function to produce returns for
+    doc : dict
+        Dict from numpydoc
+    header_level : int
+        Number of `#`s to use for header
+
+    Returns
+    -------
+    list of str
+        Markdown for examples section
+    """
     lines = []
     return_type = None
     try:
@@ -287,6 +330,19 @@ def returns_section(thing, doc, header_level):
 
 
 def summary(doc):
+    """
+    Generate markdown for summary section.
+
+    Parameters
+    ----------
+    doc : dict
+        Output from numpydoc
+
+    Returns
+    -------
+    list of str
+        Markdown strings
+    """
     lines = []
     if "Summary" in doc and len(doc["Summary"]) > 0:
         lines.append(fix_footnotes(" ".join(doc["Summary"])))
@@ -298,6 +354,23 @@ def summary(doc):
 
 
 def params_section(thing, doc, header_level):
+    """
+    Generate markdown for Parameters section.
+
+    Parameters
+    ----------
+    thing : function
+        Function to produce parameters from
+    doc : dict
+        Dict from numpydoc
+    header_level : int
+        Number of `#`s to use for header
+
+    Returns
+    -------
+    list of str
+        Markdown for examples section
+    """
     lines = []
     annotations = dict()
     annot_src = thing
@@ -319,10 +392,39 @@ def params_section(thing, doc, header_level):
 
 
 def escape(string):
+    """
+    Escape underscores in markdown.
+
+    Parameters
+    ----------
+    string : str
+        String to escape
+
+    Returns
+    -------
+    str
+        The string, with `_`s escaped with backslashes
+    """
     return string.replace("_", "\\_")
 
 
 def get_source_link(thing, source_location):
+    """
+    Get a link to the line number a module/class/function is defined at.
+
+    Parameters
+    ----------
+    thing : function or class
+        Thing to get the link for
+    source_location : str
+        GitHub url of the source code
+
+    Returns
+    -------
+    str
+        String with link to the file & line number, or empty string if it
+        couldn't be found
+    """
     try:
         lineno = get_line(thing)
         try:
@@ -353,6 +455,16 @@ def get_source_link(thing, source_location):
 
 
 def get_signature(name, thing):
+    """
+    Get the signature for a function or class, formatted nicely if possible.
+    
+    Parameters
+    ----------
+    name : str
+        Name of the thing, used as the first part of the signature
+    thing : class or function
+        Thing to get the signature of
+    """
     if inspect.ismodule(thing):
         return ""
     try:
@@ -375,7 +487,11 @@ def get_signature(name, thing):
     return f"```python\n{func_sig}\n```\n"
 
 
-def get_names(names, types):
+def _get_names(names, types):
+    """
+    Get names, bearing in mind that there might be no name,
+    no type, and that the `:` separator might be wrongly used.
+    """
     if types == "":
         try:
             names, types = names.split(":")
@@ -385,12 +501,28 @@ def get_names(names, types):
 
 
 def type_list(annotations, doc, header):
+    """
+    Construct a list of types, preferring type annotations to
+    docstrings if they are available.
+
+    Parameters
+    ----------
+    annotations : dict
+        Dictionary of parameter name -> type annotation
+    doc : list of tuple
+        Numpydoc's type list section
+
+    Returns
+    -------
+    list of str
+        Markdown formatted type list
+    """
     lines = []
     docced = set()
     if len(annotations) > 0 or len(doc) > 0:
         lines.append(header)
         for names, types, description in doc:
-            names, types = get_names(names, types)
+            names, types = _get_names(names, types)
             unannotated = []
             for name in names:
                 docced.add(name)
@@ -424,11 +556,14 @@ def type_list(annotations, doc, header):
     return lines
 
 
-def split_props(thing, doc):
+def _split_props(thing, doc):
+    """
+    Separate properties from other kinds of member.
+    """
     props = inspect.getmembers(thing, lambda o: isinstance(o, property))
     ps = []
     docs = [
-        (*get_names(names, types), names, types, desc) for names, types, desc in doc
+        (*_get_names(names, types), names, types, desc) for names, types, desc in doc
     ]
     for prop_name, prop in props:
         in_doc = [d for d in enumerate(docs) if prop_name in d[0]]
@@ -442,6 +577,25 @@ def split_props(thing, doc):
 
 
 def attributes_section(thing, doc, header_level):
+    """
+    Generate an attributes section for classes.
+
+    Prefers type annotations, if they are present.
+
+    Parameters
+    ----------
+    thing : class
+        Class to document
+    doc : dict
+        Numpydoc output
+    header_level : int
+        Number of `#`s to use for header
+
+    Returns
+    -------
+    list of str
+        Markdown formatted attribute list
+    """
     # Get Attributes
 
     if not inspect.isclass(thing):
@@ -453,7 +607,7 @@ def attributes_section(thing, doc, header_level):
     except AttributeError:
         pass
 
-    props, class_doc = split_props(thing, doc["Attributes"])
+    props, class_doc = _split_props(thing, doc["Attributes"])
     annotations.pop("return", None)
     tl = type_list(annotations, class_doc, "\n### Attributes\n\n")
     if len(tl) == 0 and len(props) > 0:
@@ -464,6 +618,21 @@ def attributes_section(thing, doc, header_level):
 
 
 def to_doc(name, thing, header_level, source_location):
+    """
+    Generate markdown for a class or function
+
+    Parameters
+    ----------
+    name : str
+        Name of the thing being documented
+    thing : class or function
+        Class or function to document
+    header_level : int
+        Heading level
+    source_location : str
+        URL of repo containing source code
+    """
+
     if inspect.isclass(thing):
         header = f"{'#'*header_level} Class **{name}**\n\n"
     else:
@@ -490,6 +659,17 @@ def to_doc(name, thing, header_level, source_location):
 
 
 def doc_module(module_name, module, output_dir, source_location, leaf):
+    """
+    Document a module
+
+    Parameters
+    ----------
+    module_name : str
+    module : module
+    output_dir : str
+    source_location : str
+    leaf : bool
+    """
     path = pathlib.Path(output_dir).joinpath(*module.__name__.split("."))
     available_classes = get_available_classes(module)
     deffed_classes = get_classes(module)
