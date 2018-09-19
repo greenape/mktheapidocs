@@ -1,0 +1,63 @@
+site_name: mktheapidocs
+repo_name: 'greenape/mktheapidocs'
+repo_url: https://github.com/greenape/mktheapidocs
+plugins:
+  - mktheapidocs:
+      modules: 
+        mktheapidocs:
+          section: api 
+          source_repo: "https://github.com/greenape/mktheapidocs"
+
+theme:
+  name: 'material'
+  # Don't include MkDocs' JavaScript
+  include_search_page: false
+  search_index_only: true
+
+  # Default values, taken from mkdocs_theme.yml
+  language: en
+  feature:
+      tabs: true
+  palette:
+      primary: "green"
+      accent: "green"
+  font:
+      text: Roboto
+      code: Roboto Mono
+  favicon: assets/images/favicon.png
+  logo:
+      icon: "\uE80C"
+# Extensions
+markdown_extensions:
+  - markdown.extensions.admonition
+  - markdown.extensions.codehilite:
+      guess_lang: false
+  - markdown.extensions.def_list
+  - markdown.extensions.footnotes
+  - markdown.extensions.meta
+  - markdown.extensions.toc:
+      permalink: true
+  - pymdownx.arithmatex
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+
+extra:
+  repo_icon: 'github'
+  social:
+    - type: 'github'
+      link: 'https://github.com/greenape/mktheapidocs'

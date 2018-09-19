@@ -29,13 +29,12 @@ class Module(mkdocs.config.config_options.OptionallyRequired):
 
     def run_validation(self, value):
         try:
-            for mod in value:
-                module, target, path = mod
+            for module, details in value.items():
                 importlib.import_module(module)
-        except ValueError:
-            raise mkdocs.config.config_options.ValidationError(
-                "Missing part of config."
-            )
+                if "section" not in details:
+                    raise mkdocs.config.config_options.ValidationError(f"Missing section for {module}")
+                if "source_repo" not in details:
+                    raise mkdocs.config.config_options.ValidationError(f"Missing source_repo for {module}")
         except ModuleNotFoundError:
             raise mkdocs.config.config_options.ValidationError(
                 f"{module} not found. Have you installed it?"
@@ -50,7 +49,9 @@ class Plugin(mkdocs.plugins.BasePlugin):
         # print(config)
         self.files = {}
         self.module_files = {}
-        for module_name, target, source_location in self.config["modules"]:
+        for module_name, details in self.config["modules"].items():
+            target = details["section"]
+            source_location = details["source_repo"]
             source_location = os.path.expandvars(source_location)
             module = importlib.import_module(module_name)
             importlib.reload(module)

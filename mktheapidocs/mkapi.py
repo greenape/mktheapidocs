@@ -465,23 +465,26 @@ def get_signature(name, thing):
     """
     if inspect.ismodule(thing):
         return ""
-    try:
+    if isinstance(thing, property):
+        func_sig = name
+    else:
         try:
             try:
-                func_sig = black.format_str(
-                    f"{name}{inspect.signature(thing)}", 80
-                ).strip()
-            except TypeError:
-                func_sig = black.format_str(
-                    f"{name}{inspect.signature(thing.fget)}", 80
-                ).strip()
+                try:
+                    func_sig = black.format_str(
+                        f"{name}{inspect.signature(thing)}", 80
+                    ).strip()
+                except TypeError:
+                    func_sig = black.format_str(
+                        f"{name}{inspect.signature(thing.fget)}", 80
+                    ).strip()
+            except ValueError:
+                try:
+                    func_sig = f"{name}{inspect.signature(thing)}"
+                except TypeError:
+                    func_sig = f"{name}{inspect.signature(thing.fget)}"
         except ValueError:
-            try:
-                func_sig = f"{name}{inspect.signature(thing)}"
-            except TypeError:
-                func_sig = f"{name}{inspect.signature(thing.fget)}"
-    except ValueError:
-        return ""
+            return ""
     return f"```python\n{func_sig}\n```\n"
 
 
@@ -587,7 +590,7 @@ def type_list(signature, doc, header):
                         lines.append("\n\n")
     except Exception as e:
         print(e)
-    return lines
+    return lines if len(lines) > 1 else []
 
 
 def _split_props(thing, doc):
