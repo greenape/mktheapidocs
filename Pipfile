@@ -5,8 +5,15 @@ name = "pypi"
 
 [packages]
 versioneer = "*"
+"e1839a8" = {editable = true, path = "."}
+mkdocs = "*"
+pymdown-extensions = "*"
+mkdocs-material = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
