@@ -1,11 +1,12 @@
-import mkdocs, importlib, pathlib, os, functools
-from .mkapi import (
-    make_api_doc,
-    get_all_modules_from_files,
-    get_submodule_files,
-    doc_module,
-)
-from itertools import chain
+import functools
+import importlib
+import mkdocs
+import os
+import pathlib
+
+from mkdocs.utils import nest_paths
+
+from .mkapi import get_submodule_files, doc_module
 
 
 class PyDocFile(mkdocs.structure.files.File):
@@ -32,14 +33,34 @@ class Module(mkdocs.config.config_options.OptionallyRequired):
             for module, details in value.items():
                 importlib.import_module(module)
                 if "section" not in details:
-                    raise mkdocs.config.config_options.ValidationError(f"Missing section for {module}")
+                    raise mkdocs.config.config_options.ValidationError(
+                        f"Missing section for {module}"
+                    )
                 if "source_repo" not in details:
-                    raise mkdocs.config.config_options.ValidationError(f"Missing source_repo for {module}")
+                    raise mkdocs.config.config_options.ValidationError(
+                        f"Missing source_repo for {module}"
+                    )
         except ModuleNotFoundError:
             raise mkdocs.config.config_options.ValidationError(
                 f"{module} not found. Have you installed it?"
             )
         return value
+
+
+def find_section_anchor(nav, anchor):
+    try:
+        in_this_level = nav.index(anchor)
+        return in_this_level, nav
+    except ValueError:
+        dicts = [l for l in nav if isinstance(l, dict)]
+        for d in dicts:
+            d_val = list(d.items())[0][1]
+            try:
+                in_this_level, nav = find_section_anchor(d_val, anchor)
+                return in_this_level, nav
+            except ValueError:
+                pass
+    raise ValueError
 
 
 class Plugin(mkdocs.plugins.BasePlugin):
@@ -51,6 +72,7 @@ class Plugin(mkdocs.plugins.BasePlugin):
         self.module_files = {}
         for module_name, details in self.config["modules"].items():
             target = details["section"]
+            self.module_files[target] = []
             source_location = details["source_repo"]
             source_location = os.path.expandvars(source_location)
             module = importlib.import_module(module_name)
@@ -77,6 +99,15 @@ class Plugin(mkdocs.plugins.BasePlugin):
                 # print(f.__dict__)
                 # print()
                 self.files[f.url] = (f, do_doc)
+                self.module_files[target].append(f)
+            if config["nav"]:
+                try:
+                    ix, nav = find_section_anchor(config["nav"], f"api-docs-{target}")
+                    nav[ix] = nest_paths(f.src_path for f in self.module_files[target])[
+                        0
+                    ]
+                except ValueError:
+                    pass
 
     def on_files(self, files, config):
         for f, func in self.files.values():
@@ -84,7 +115,6 @@ class Plugin(mkdocs.plugins.BasePlugin):
         return files
 
     def on_nav(self, nav, config, files):
-        # print(nav.__dict__)
         return nav
 
     def on_page_read_source(self, eh, page, config):

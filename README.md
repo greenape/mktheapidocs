@@ -4,7 +4,7 @@ A plugin for [MkDocs](http://mkdocs.org) to generate API documentation from [num
 
 ## Installation
 
-`pip install mktheapidocs`
+`pip install mktheapidocs[plugin]`
 
 ## Usage
 
@@ -20,3 +20,5 @@ plugins:
 ```
 
 The plugin will find, and document all submodules, classes, attributes, functions etc. and, if you're using `mkdocs serve`, changes to the documentation will be reflected live.
+
+If you want to manually configure your nav, then you can specify where the api documentation section will be using an `api-docs-<docs_section>` placeholder.

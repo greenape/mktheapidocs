@@ -4,6 +4,17 @@ from functools import cmp_to_key
 
 
 def get_line(thing):
+    """
+    Get the line number for something.
+    Parameters
+    ----------
+    thing : function, class, module
+
+    Returns
+    -------
+    int
+        Line number in the source file
+    """
     try:
         return inspect.getsourcelines(thing)[1]
     except TypeError:
@@ -94,7 +105,9 @@ def get_classes(module):
         [
             x
             for x in inspect.getmembers(module, inspect.isclass)
-            if (not x[0].startswith("_")) and x[1].__module__ == module.__name__ and not type(x[1]) is enum.EnumMeta
+            if (not x[0].startswith("_"))
+            and x[1].__module__ == module.__name__
+            and not type(x[1]) is enum.EnumMeta
         ]
     )
 
@@ -104,7 +117,9 @@ def get_enums(module):
         [
             x
             for x in inspect.getmembers(module, inspect.isclass)
-            if (not x[0].startswith("_")) and x[1].__module__ == module.__name__ and type(x[1]) is enum.EnumMeta
+            if (not x[0].startswith("_"))
+            and x[1].__module__ == module.__name__
+            and type(x[1]) is enum.EnumMeta
         ]
     )
 
@@ -141,6 +156,10 @@ def get_available_classes(module):
             and x[1].__module__.split(".")[0] == shared_root
         ]
     )
+
+
+def deffed_here(thing, holder):
+    return inspect.getfile(thing) == inspect.getfile(holder)
 
 
 def fix_footnotes(s):
@@ -207,7 +226,6 @@ def notes_section(doc):
         lines.append("!!! note\n")
         lines.append(f"    {' '.join(doc['Notes'])}\n\n")
     return lines
-
 
 
 def refs_section(doc):
@@ -385,7 +403,9 @@ def params_section(thing, doc, header_level):
 
     class_doc = doc["Parameters"]
     return type_list(
-        inspect.signature(thing), class_doc, "#" * (header_level + 1) + " Parameters\n\n"
+        inspect.signature(thing),
+        class_doc,
+        "#" * (header_level + 1) + " Parameters\n\n",
     )
 
 
@@ -500,6 +520,7 @@ def _get_names(names, types):
             pass
     return names.split(","), types
 
+
 def string_annotation(typ, default):
     """
     Construct a string representation of a type annotation.
@@ -517,7 +538,11 @@ def string_annotation(typ, default):
         String version of the type annotation
     """
     try:
-        type_string = f"`{typ.__name__}`" if typ.__module__ == "builtins" else f"`{typ.__module__}.{typ.__name__}`"
+        type_string = (
+            f"`{typ.__name__}`"
+            if typ.__module__ == "builtins"
+            else f"`{typ.__module__}.{typ.__name__}`"
+        )
     except AttributeError:
         type_string = f"`{str(typ)}`"
     if default is None:
@@ -527,7 +552,6 @@ def string_annotation(typ, default):
     else:
         type_string = f"{type_string}, default ``{default}``"
     return type_string
-
 
 
 def type_list(signature, doc, header):
@@ -547,7 +571,7 @@ def type_list(signature, doc, header):
     list of str
         Markdown formatted type list
     """
-    
+
     lines = []
     docced = set()
     lines.append(header)
@@ -566,8 +590,8 @@ def type_list(signature, doc, header):
                     lines.append(f"- `{name}`: {type_string}")
                     lines.append("\n\n")
                 except (AttributeError, KeyError):
-                    unannotated.append(name) # No annotation
-                    
+                    unannotated.append(name)  # No annotation
+
             if len(unannotated) > 0:
                 lines.append("- ")
                 lines.append(", ".join(f"`{name}`" for name in unannotated))
@@ -638,7 +662,6 @@ def attributes_section(thing, doc, header_level):
     if not inspect.isclass(thing):
         return []
 
-
     props, class_doc = _split_props(thing, doc["Attributes"])
     tl = type_list(inspect.signature(thing), class_doc, "\n### Attributes\n\n")
     if len(tl) == 0 and len(props) > 0:
@@ -646,6 +669,7 @@ def attributes_section(thing, doc, header_level):
     for prop in props:
         tl.append(f"- [`{prop}`](#{prop})\n\n")
     return tl
+
 
 def enum_doc(name, enum, header_level, source_location):
     """
@@ -674,8 +698,6 @@ def enum_doc(name, enum, header_level, source_location):
     lines.append(f"{'#'*(header_level + 1)} Members\n\n")
     lines += [f"- `{str(v).split('.').pop()}`: `{v.value}` \n\n" for v in enum]
     return lines
-
-
 
 
 def to_doc(name, thing, header_level, source_location):
@@ -760,7 +782,7 @@ def doc_module(module_name, module, output_dir, source_location, leaf):
         class_methods = [
             x
             for x in inspect.getmembers(cls, inspect.isfunction)
-            if (not x[0].startswith("_"))
+            if (not x[0].startswith("_")) and deffed_here(x[1], cls)
         ]
         class_methods += inspect.getmembers(cls, lambda o: isinstance(o, property))
         if len(class_methods) > 0:
