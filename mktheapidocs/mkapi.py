@@ -489,22 +489,17 @@ def get_signature(name, thing):
         func_sig = name
     else:
         try:
-            try:
-                try:
-                    func_sig = black.format_str(
-                        f"{name}{inspect.signature(thing)}", 80
-                    ).strip()
-                except TypeError:
-                    func_sig = black.format_str(
-                        f"{name}{inspect.signature(thing.fget)}", 80
-                    ).strip()
-            except ValueError:
-                try:
-                    func_sig = f"{name}{inspect.signature(thing)}"
-                except TypeError:
-                    func_sig = f"{name}{inspect.signature(thing.fget)}"
+            sig = inspect.signature(thing)
+        except TypeError:
+            sig = inspect.signature(thing.fget)
         except ValueError:
             return ""
+        func_sig = f"{name}{sig}"
+        try:
+            mode = black.FileMode(line_length=80)
+            func_sig = black.format_str(func_sig, mode=mode).strip()
+        except (ValueError, TypeError):
+            pass
     return f"```python\n{func_sig}\n```\n"
 
 
