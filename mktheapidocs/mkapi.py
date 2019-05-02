@@ -300,6 +300,8 @@ def returns_section(thing, doc, header_level):
     """
     lines = []
     return_type = None
+    # print(thing)
+    # print(doc)
     try:
         return_type = thing.__annotations__["return"]
     except AttributeError:
@@ -325,7 +327,7 @@ def returns_section(thing, doc, header_level):
 
     try:
         if "Returns" in doc and len(doc["Returns"]) > 0 or return_type != "":
-            print(doc["Returns"])
+            # print(doc["Returns"])
             lines.append(f"{'#'*(header_level+1)} Returns\n")
             if return_type != "" and len(doc["Returns"]) == 1:
                 name, typ, desc = doc["Returns"][0]
@@ -388,7 +390,7 @@ def params_section(thing, doc, header_level):
 
     Parameters
     ----------
-    thing : functuon
+    thing : function
         Function to produce parameters from
     doc : dict
         Dict from numpydoc
@@ -609,7 +611,7 @@ def type_list(signature, doc, header):
                         lines.append(f"- `{name}`")
                         lines.append("\n\n")
     except Exception as e:
-        print(e)
+        print(f"Couldn't get type list for {signature}: {e}")
     return lines if len(lines) > 1 else []
 
 
@@ -659,9 +661,9 @@ def attributes_section(thing, doc, header_level):
         return []
 
     props, class_doc = _split_props(thing, doc["Attributes"])
-    tl = type_list(inspect.signature(thing), class_doc, "\n### Attributes\n\n")
+    tl = type_list(inspect.signature(thing), class_doc, "\n## Attributes\n\n")
     if len(tl) == 0 and len(props) > 0:
-        tl.append("\n### Attributes\n\n")
+        tl.append("\n## Attributes\n\n")
     for prop in props:
         tl.append(f"- [`{prop}`](#{prop})\n\n")
     return tl
@@ -687,7 +689,7 @@ def enum_doc(name, enum, header_level, source_location):
     lines.append(f"```python\n{name}\n```\n")
     lines.append(get_source_link(enum, source_location))
     try:
-        doc = NumpyDocString(inspect.getdoc(thing))._parsed_data
+        doc = NumpyDocString(inspect.getdoc(enum))._parsed_data
         lines += summary(doc)
     except:
         pass
@@ -725,11 +727,19 @@ def to_doc(name, thing, header_level, source_location):
     ]
 
     try:
+        # print(f"{name}: {thing}")
         doc = NumpyDocString(inspect.getdoc(thing))._parsed_data
         lines += summary(doc)
+        # print("Got summary")
         lines += attributes_section(thing, doc, header_level)
-        lines += params_section(thing, doc, header_level)
+        # print("Got attribs")
+        try:
+            lines += params_section(thing, doc, header_level)
+        except:
+            pass  # No params
+        # print("Got params")
         lines += returns_section(thing, doc, header_level)
+        # print("Got returns")
         lines += examples_section(doc, header_level)
         lines += notes_section(doc)
         lines += refs_section(doc)
@@ -782,8 +792,9 @@ def doc_module(module_name, module, output_dir, source_location, leaf):
         ]
         class_methods += inspect.getmembers(cls, lambda o: isinstance(o, property))
         if len(class_methods) > 0:
-            doc.append("### Methods \n\n")
+            doc.append("## Methods \n\n")
             for method_name, method in class_methods:
+                # print(method_name)
                 doc += to_doc(method_name, method, 4, source_location)
     for fname, func in sorted(deffed_funcs):
         doc += to_doc(fname, func, 2, source_location)
