@@ -325,10 +325,11 @@ def returns_section(thing, doc, header_level):
 
     try:
         if "Returns" in doc and len(doc["Returns"]) > 0 or return_type != "":
+            print(doc["Returns"])
             lines.append(f"{'#'*(header_level+1)} Returns\n")
             if return_type != "" and len(doc["Returns"]) == 1:
                 name, typ, desc = doc["Returns"][0]
-                if typ != "":
+                if typ != "" and name != "":
                     lines.append(f"- `{name}`: ``{return_type}``")
                 else:
                     lines.append(f"- ``{return_type}``")
