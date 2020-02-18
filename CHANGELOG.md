@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
+## [0.1.11]
+### Fixed
+- Another case where return types have no name
+
 ## [0.1.10]
 ### Fixed
 - Return types are now shown for properties
