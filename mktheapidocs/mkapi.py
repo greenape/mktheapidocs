@@ -347,7 +347,10 @@ def returns_section(thing, doc, header_level):
                         name, typ = name.split(":")
 
                     if typ != "":
-                        line = f"- `{name}`: {mangle_types(typ)}"
+                        if name != "":
+                            line = f"- `{name}`: {mangle_types(typ)}"
+                        else:
+                            line = f"- {mangle_types(typ)}"
                     else:
                         line = f"- {mangle_types(name)}"
                     line += "\n\n"
