@@ -228,6 +228,14 @@ def notes_section(doc):
     return lines
 
 
+def warnings_section(doc):
+    lines = []
+    if "Warnings" in doc and len(doc["Warnings"]) > 0:
+        lines.append("!!! warning\n")
+        lines.append(f"    {' '.join(doc['Warnings'])}\n\n")
+    return lines
+
+
 def refs_section(doc):
     """
     Generate a References section.
@@ -745,6 +753,7 @@ def to_doc(name, thing, header_level, source_location):
         # print("Got returns")
         lines += examples_section(doc, header_level)
         lines += notes_section(doc)
+        lines += warnings_section(doc)
         lines += refs_section(doc)
     except Exception as e:
         # print(f"No docstring for {name}, src {source_location}: {e}")
