@@ -80,6 +80,5 @@ workflows:
       - push_wheel:
           requires:
             - lint_python
-            - run_tests
             - build_python_wheel
           <<: *tag_and_master_only_org_context
