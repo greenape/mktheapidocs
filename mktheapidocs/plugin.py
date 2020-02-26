@@ -109,15 +109,15 @@ class Plugin(mkdocs.plugins.BasePlugin):
                 except ValueError:
                     pass
 
-    def on_files(self, files, config):
+    def on_files(self, files, **kwargs):
         for f, func in self.files.values():
             files.append(f)
         return files
 
-    def on_nav(self, nav, config, files):
+    def on_nav(self, nav, **kwargs):
         return nav
 
-    def on_page_read_source(self, eh, page, config):
+    def on_page_read_source(self, page, **kwargs):
         try:
             f, sf = self.files[page.url]
             # print(page.__dict__)
@@ -130,7 +130,7 @@ class Plugin(mkdocs.plugins.BasePlugin):
     #    root_path = pathlib.Path(config['docs_dir'])
     #    self.files = list(chain(*[make_api_doc(module_name, root_path / target, source_location) for module_name, target, source_location in self.config['modules']]))
 
-    def on_serve(self, server, config):
+    def on_serve(self, server, config, **kwargs):
         # print(server.__dict__)
         # print(config)
         builder = server.watcher._tasks[config["docs_dir"]]["func"]

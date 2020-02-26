@@ -8,7 +8,7 @@ versioneer = "*"
 e1839a8 = {editable = true,path = "."}
 mkdocs = "*"
 pymdown-extensions = "*"
-mkdocs-material = "*"
+mkdocs-material = "==4.6.3"
 
 [dev-packages]
 twine = "*"

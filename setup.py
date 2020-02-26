@@ -59,7 +59,7 @@ setup(
     packages=["mktheapidocs"],
     include_package_data=True,
     install_requires=["numpydoc", "black", "click"],
-    extras_require={"plugin": ["mkdocs"]},
+    extras_require={"plugin": ["mkdocs >= 1.1"]},
     platforms=["MacOS X", "Linux"],
     classifiers=[
         "Development Status :: 3 - Alpha",
