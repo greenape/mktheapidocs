@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
+## [0.2.0]
+### Fixed
+- Fixed compatibility with mkdocs 1.1
+
 ## [0.1.11]
 ### Fixed
 - Another case where return types have no name
@@ -37,7 +41,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - mkdocs plugin is now compatible with manually defined nav
 
 
-[Unreleased]: https://github.com/greenape/mktheapidocs/compare/0.1.10...master
+[Unreleased]: https://github.com/greenape/mktheapidocs/compare/0.2.0...master
+[0.2.0]: https://github.com/greenape/mktheapidocs/compare/0.1.11...0.2.0
+[0.1.11]: https://github.com/greenape/mktheapidocs/compare/0.1.10...0.1.11
 [0.1.10]: https://github.com/greenape/mktheapidocs/compare/0.1.8...0.1.10
 [0.1.9]: https://github.com/greenape/mktheapidocs/compare/0.1.8...0.1.9
 [0.1.8]: https://github.com/greenape/mktheapidocs/compare/0.1.7...0.1.8
