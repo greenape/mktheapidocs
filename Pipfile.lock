@@ -230,11 +230,11 @@
         },
         "pymdown-extensions": {
             "hashes": [
-                "sha256:18dd66363205c1b047e2b76fba14a839cc7ce12b48970bd8bccaa2033cbeb2da",
-                "sha256:9aeb3224a25fa24f6fd8d822243d03fd0a41a082f0f5eb6d90649d93f43bd7cb"
+                "sha256:48b21fcf1fbeb0a1ea57c26b0dcc246f3f919e72443bccc5aae914f81cbf4909",
+                "sha256:a11ebdc5c800ea350744eadaca853fab6c086edefba8df767dfb58e97de0653e"
             ],
             "index": "pypi",
-            "version": "==7.0b2"
+            "version": "==7.0rc1"
         },
         "pyparsing": {
             "hashes": [
@@ -435,11 +435,10 @@
     "develop": {
         "bleach": {
             "hashes": [
-                "sha256:2ffa40dfa80b141ff58eee538bce0d2a09c7d456018d00f7a2cb0ebf967c524d",
-                "sha256:f0b1ee0315062e60afa6b7cc39b1c3718b591e1d552a8841044dc49a68465659"
+                "sha256:53165a6596e7899c4338d847315fec508110a53bd6fd15c127c2e0d0860264e3",
+                "sha256:f8dfd8a7e26443e986c4e44df31870da8e906ea61096af06ba5d5cc2d519842a"
             ],
-            "index": "pypi",
-            "version": "==3.1.2"
+            "version": "==3.1.3"
         },
         "certifi": {
             "hashes": [
