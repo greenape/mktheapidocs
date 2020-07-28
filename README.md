@@ -17,6 +17,7 @@ plugins:
         <module_name>:
           section: <docs_section> 
           source_repo: <URL_of_source>
+          hidden: ["submodules", "to", "omit"]
 ```
 
 The plugin will find, and document all submodules, classes, attributes, functions etc. and, if you're using `mkdocs serve`, changes to the documentation will be reflected live.

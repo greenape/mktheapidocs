@@ -79,7 +79,7 @@ class Plugin(mkdocs.plugins.BasePlugin):
             importlib.reload(module)
             src_path = pathlib.Path(module.__file__).parent.parent.absolute()
             target_path = pathlib.Path(config["site_dir"])
-            for module, file in get_submodule_files(module):
+            for module, file in get_submodule_files(module, details["hidden"]):
                 importlib.reload(module)
                 do_doc = functools.partial(
                     doc_module,
