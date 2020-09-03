@@ -6,7 +6,7 @@ plugins:
       modules: 
         mktheapidocs:
           section: api 
-          source_repo: "https://github.com/greenape/mktheapidocs"
+          source_repo: "https://github.com/greenape/mktheapidocs/blob/master"
 
 theme:
   name: 'material'
