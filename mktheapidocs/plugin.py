@@ -44,6 +44,10 @@ class Module(mkdocs.config.config_options.OptionallyRequired):
             raise mkdocs.config.config_options.ValidationError(
                 f"{module} not found. Have you installed it?"
             )
+        except AttributeError:
+            raise mkdocs.config.config_options.ValidationError(
+                f"expected <class 'dict'>, but got {type(value)}"
+            )
         return value
 
 
