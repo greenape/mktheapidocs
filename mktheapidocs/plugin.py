@@ -130,9 +130,8 @@ class Plugin(mkdocs.plugins.BasePlugin):
     #    root_path = pathlib.Path(config['docs_dir'])
     #    self.files = list(chain(*[make_api_doc(module_name, root_path / target, source_location) for module_name, target, source_location in self.config['modules']]))
 
-    def on_serve(self, server, config, **kwargs):
+    def on_serve(self, server, config, builder, **kwargs):
         # print(server.__dict__)
         # print(config)
-        builder = server.watcher._tasks[config["docs_dir"]]["func"]
         for file, func in self.files.values():
             server.watch(str(file.abs_src_path), builder)
