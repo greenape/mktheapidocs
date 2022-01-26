@@ -64,7 +64,7 @@ def find_section_anchor(nav, anchor):
 
 
 class Plugin(mkdocs.plugins.BasePlugin):
-    config_scheme = (("modules", Module()),)
+    config_scheme = (("modules", Module(required=True)),)
 
     def on_config(self, config):
         # print(config)
