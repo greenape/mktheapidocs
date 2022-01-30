@@ -44,6 +44,10 @@ class Module(mkdocs.config.config_options.OptionallyRequired):
             raise mkdocs.config.config_options.ValidationError(
                 f"{module} not found. Have you installed it?"
             )
+        except AttributeError:
+            raise mkdocs.config.config_options.ValidationError(
+                f"expected <class 'dict'>, but got {type(value)}"
+            )
         return value
 
 
@@ -64,7 +68,7 @@ def find_section_anchor(nav, anchor):
 
 
 class Plugin(mkdocs.plugins.BasePlugin):
-    config_scheme = (("modules", Module()),)
+    config_scheme = (("modules", Module(required=True)),)
 
     def on_config(self, config):
         # print(config)
@@ -79,7 +83,7 @@ class Plugin(mkdocs.plugins.BasePlugin):
             importlib.reload(module)
             src_path = pathlib.Path(module.__file__).parent.parent.absolute()
             target_path = pathlib.Path(config["site_dir"])
-            for module, file in get_submodule_files(module, details["hidden"]):
+            for module, file in get_submodule_files(module, details.get("hidden", [])):
                 importlib.reload(module)
                 do_doc = functools.partial(
                     doc_module,
@@ -130,9 +134,8 @@ class Plugin(mkdocs.plugins.BasePlugin):
     #    root_path = pathlib.Path(config['docs_dir'])
     #    self.files = list(chain(*[make_api_doc(module_name, root_path / target, source_location) for module_name, target, source_location in self.config['modules']]))
 
-    def on_serve(self, server, config, **kwargs):
+    def on_serve(self, server, config, builder, **kwargs):
         # print(server.__dict__)
         # print(config)
-        builder = server.watcher._tasks[config["docs_dir"]]["func"]
         for file, func in self.files.values():
             server.watch(str(file.abs_src_path), builder)

@@ -10,23 +10,23 @@ plugins:
 
 theme:
   name: 'material'
+  icon:
+    repo: fontawesome/brands/github
   # Don't include MkDocs' JavaScript
   include_search_page: false
   search_index_only: true
 
   # Default values, taken from mkdocs_theme.yml
   language: en
-  feature:
-      tabs: true
+  features:
+    - navigation.tabs
   palette:
       primary: "green"
       accent: "green"
   font:
       text: Roboto
       code: Roboto Mono
-  favicon: assets/images/favicon.png
-  logo:
-      icon: "\uE80C"
+
 # Extensions
 markdown_extensions:
   - markdown.extensions.admonition
@@ -57,7 +57,6 @@ markdown_extensions:
 
 
 extra:
-  repo_icon: 'github'
   social:
-    - type: 'github'
+    - icon: fontawesome/brands/github
       link: 'https://github.com/greenape/mktheapidocs'
