@@ -106,7 +106,8 @@ class Plugin(mkdocs.plugins.BasePlugin):
                 self.module_files[target].append(f)
             if config["nav"]:
                 try:
-                    ix, nav = find_section_anchor(config["nav"], f"api-docs-{target}")
+                    ix, nav = find_section_anchor(
+                        config["nav"], f"api-docs-{target}")
                     nav[ix] = nest_paths(f.src_path for f in self.module_files[target])[
                         0
                     ]

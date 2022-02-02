@@ -1,4 +1,11 @@
-import inspect, os, pathlib, importlib, black, re, click, enum
+import inspect
+import os
+import pathlib
+import importlib
+import black
+import re
+import click
+import enum
 from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
 from functools import cmp_to_key
 
@@ -51,7 +58,8 @@ def get_submodule_files(module, hide=["_version"]):
             try:
                 for file in files:
                     module_name = (
-                        "" if "__init__.py" == file else inspect.getmodulename(file)
+                        "" if "__init__.py" == file else inspect.getmodulename(
+                            file)
                     )
                     if module_name is not None and module_name not in hide:
                         submodule = importlib.import_module(
@@ -59,7 +67,8 @@ def get_submodule_files(module, hide=["_version"]):
                         )
                         modules.add((submodule, module_path / file))
             except ModuleNotFoundError:
-                print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
+                print(
+                    f"Skipping {'.'.join(module_path.parts)} - not a module.")
     return _sort_modules(modules)
 
 
@@ -95,7 +104,8 @@ def get_all_modules_from_files(module, hide=["__init__", "_version"]):
                                     )
                                 )
             except ModuleNotFoundError:
-                print(f"Skipping {'.'.join(module_path.parts)} - not a module.")
+                print(
+                    f"Skipping {'.'.join(module_path.parts)} - not a module.")
     os.chdir(dir_was)
     return modules
 
@@ -489,7 +499,7 @@ def get_source_link(thing, source_location):
 def get_signature(name, thing):
     """
     Get the signature for a function or class, formatted nicely if possible.
-    
+
     Parameters
     ----------
     name : str
@@ -802,7 +812,8 @@ def doc_module(module_name, module, output_dir, source_location, leaf):
             for x in inspect.getmembers(cls, inspect.isfunction)
             if (not x[0].startswith("_")) and deffed_here(x[1], cls)
         ]
-        class_methods += inspect.getmembers(cls, lambda o: isinstance(o, property))
+        class_methods += inspect.getmembers(cls,
+                                            lambda o: isinstance(o, property))
         if len(class_methods) > 0:
             doc.append("## Methods \n\n")
             for method_name, method in class_methods:
