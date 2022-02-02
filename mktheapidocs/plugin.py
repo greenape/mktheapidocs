@@ -19,14 +19,14 @@ class PyDocFile(mkdocs.structure.files.File):
         return True
 
     def _get_stem(self):
-        """ Return the name of the file without it's extension. """
+        """Return the name of the file without it's extension."""
         filename = os.path.basename(self.src_path)
         stem, ext = os.path.splitext(filename)
         return "index" if stem in ("index", "README", "__init__") else stem
 
 
 class Module(mkdocs.config.config_options.OptionallyRequired):
-    """ Validate modules specified are installed. """
+    """Validate modules specified are installed."""
 
     def run_validation(self, value):
         try:
@@ -106,8 +106,7 @@ class Plugin(mkdocs.plugins.BasePlugin):
                 self.module_files[target].append(f)
             if config["nav"]:
                 try:
-                    ix, nav = find_section_anchor(
-                        config["nav"], f"api-docs-{target}")
+                    ix, nav = find_section_anchor(config["nav"], f"api-docs-{target}")
                     nav[ix] = nest_paths(f.src_path for f in self.module_files[target])[
                         0
                     ]
