@@ -1,4 +1,11 @@
-import inspect, os, pathlib, importlib, black, re, click, enum
+import inspect
+import os
+import pathlib
+import importlib
+import black
+import re
+import click
+import enum
 from numpydoc.docscrape import NumpyDocString, FunctionDoc, ClassDoc
 from functools import cmp_to_key
 
@@ -26,7 +33,7 @@ def get_line(thing):
 
 
 def _sort_modules(mods):
-    """ Always sort `index` or `README` as first filename in list. """
+    """Always sort `index` or `README` as first filename in list."""
 
     def compare(x, y):
         x = x[1]
@@ -489,7 +496,7 @@ def get_source_link(thing, source_location):
 def get_signature(name, thing):
     """
     Get the signature for a function or class, formatted nicely if possible.
-    
+
     Parameters
     ----------
     name : str
