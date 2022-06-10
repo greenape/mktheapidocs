@@ -6,9 +6,9 @@ name = "pypi"
 [packages]
 versioneer = "*"
 e1839a8 = {editable = true,path = "."}
-mkdocs = "*"
+mkdocs = ">=1.2"
 pymdown-extensions = "*"
-mkdocs-material = "==4.6.3"
+mkdocs-material = "*"
 
 [dev-packages]
 twine = "*"

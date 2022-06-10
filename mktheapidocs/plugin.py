@@ -133,6 +133,5 @@ class Plugin(mkdocs.plugins.BasePlugin):
     def on_serve(self, server, config, **kwargs):
         # print(server.__dict__)
         # print(config)
-        builder = server.watcher._tasks[config["docs_dir"]]["func"]
         for file, func in self.files.values():
-            server.watch(str(file.abs_src_path), builder)
+            server.watch(str(file.abs_src_path), None)
